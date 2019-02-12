@@ -17,13 +17,26 @@
   <a href="#examples"><b>Examples</b></a>
 </p>
 
-
 ## Synopsis
 
 Sibilla is a Python ORM framework for Oracle databases. It wraps around [cx_Oracle](https://oracle.github.io/python-cx_Oracle/) to provide a Pythonic interface to the SQL engine and PL/SQL code. If you have an Oracle database application, you don't have to rewrite it from scratch in Python or code ad-hoc wrapper. Instead Sibilla allows you to call PL/SQL functions/procedures in pure Python code.
 
 Sibilla is mainly meant to be used for prototyping applications that connect to an Oracle database quickly, or for swift tooling. It can also be used to develop non-performance-critical production applications.
 
+
+## Installation
+
+Sibilla can be installed directly from PyPI
+
+~~~~
+python3 -m pip install sibilla --upgrade
+~~~~
+
+Alternatively, it can be installed with pip from GitHub with
+
+~~~
+python3 -m pip install git+https://github.com/P403n1x87/sibilla
+~~~
 
 ## Example
 
