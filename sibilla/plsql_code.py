@@ -268,7 +268,7 @@ if __name__ == "__main__":
 
     f = FunctionCode("k.debug", 42, "test", rec_arg = record_inst)
     print(str(f))
-    print f.bind_variables
+    print(f.bind_variables)
 
     record_instb = record_type()
     record_instb.value1 = 12
@@ -282,4 +282,4 @@ if __name__ == "__main__":
 
     gen = Assign(rec, f)
     print(str(gen))
-    print gen.bind_variables
+    print(gen.bind_variables)
