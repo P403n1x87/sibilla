@@ -139,7 +139,7 @@ class Table(OracleObject):
                     )
                 else:
                     raise ValueError(
-                        "oracle: No data matching the given criteria in Table "
+                        "sibilla: No data matching the given criteria in Table "
                         + self.name.upper()
                     )
         else:

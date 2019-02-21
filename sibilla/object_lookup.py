@@ -23,7 +23,7 @@ _type_mapping = {
 class DatabaseObjectError(Exception):
     """
     Defines an error specific to object lookup within the Oracle database
-    associated to an OracleDB object.
+    associated to an Database object.
     """
     pass
 
@@ -35,7 +35,7 @@ class ObjectLookup(Cached):
     packages, ...) are looked up from the Oracle database when accessed as
     attributes of an instance of this class.
 
-    Every instance of OracleDB comes with a default ObjectLookup instance
+    Every instance of Database comes with a default ObjectLookup instance
     accessible through the read-only property ``object_lookup``. This can be
     used to specify the custom classes to handle general Oracle object, as well
     as specific items, like individual tables, packages, etc...
@@ -44,18 +44,18 @@ class ObjectLookup(Cached):
         Assume that the database we are connected to has families of tables
         with a certain prefix, say ``DATA_``, that can be, in practice, treated
         as a namespace. One might want to be able to access such tables (e.g.
-        the ``DATA_CUSTOMER`` table) with an attribute access on a OracleDB
+        the ``DATA_CUSTOMER`` table) with an attribute access on a Database
         object as
 
-            >>> from oracle import OracleDB
-            >>> db = OracleDB("username", "password", "dsn")
+            >>> from sibilla import Database
+            >>> db = Database("username", "password", "dsn")
             >>> db.data.customer
 
         This can be achieved in the following ways. First of all one subclasses
         ``ObjectLookup`` to create a custom lookup with an override of the
         ``renaming`` method
 
-            from oracle import ObjectLookup
+            from sibilla import ObjectLookup
 
             class DataLookup(ObjectLookup):
 
@@ -66,10 +66,10 @@ class ObjectLookup(Cached):
 
             >>> db.data = DataLookup()
 
-        or one subclasses OracleDB and initializes ``data`` as an object
+        or one subclasses Database and initializes ``data`` as an object
         attribute:
 
-            >>> class MyDB(OracleDB):
+            >>> class MyDB(Database):
             >>>     def __init__(self, *args, **kwargs):
             >>>         super(MyDB, self).__init__(*args, **kwargs)
             >>>         self.data = DataLookup(self)
@@ -79,18 +79,18 @@ class ObjectLookup(Cached):
         Thus, ``db.data.customer`` becomes equivalent to ``db.data_customer``.
 
         By default, the lookup will create an object of type ``Table`` from
-        ``oracle`` for the table accessed as ``db.data_customer``. To override
+        ``sibilla`` for the table accessed as ``db.data_customer``. To override
         this, one can subclass ``Table`` and pass the class to the ``replace``
         method as dictionary:
 
-            >>> from oracle import ObjectType, Table
+            >>> from sibilla import ObjectType, Table
             >>> MyTable(Table):
             >>>     pass
             >>>
             >>> db.object_lookup.replace({ObjectType.TABLE : MyTable})
 
         Custom table classes can also be assigned to general attributes of an
-        OracleDB object by passing the attribute name as key in the dictionary:
+        Database object by passing the attribute name as key in the dictionary:
 
             >>> db.object_lookup.replace({"customer" : MyTable})
 
@@ -121,7 +121,7 @@ class ObjectLookup(Cached):
             To access the Oracle package ``my_package#`` from Python, one could
             use the convention of replacing any occurrence of # with __.
 
-                >>> from oracle import ObjectLookup
+                >>> from sibilla import ObjectLookup
                 >>> class MyLookup(ObjectLookup):
                 >>>     def renaming(self, name):
                 >>>         return name.replace('__', '#')
