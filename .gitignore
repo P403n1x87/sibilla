@@ -1,8 +1,3 @@
-*.pyc
-test
-*.egg*
-*.ipynb*
-build/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -57,7 +52,8 @@ coverage.xml
 *.pot
 
 # Sphinx documentation
-docs/_build/
+docs/doctrees
+docs/html
 
 # PyBuilder
 target/
