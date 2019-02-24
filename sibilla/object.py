@@ -1,4 +1,59 @@
-from .oracle_object import ObjectType
+import sibilla
+
+from sibilla.caching import Cached, cachedmethod
+
+
+class ObjectType(type):
+    TABLE           = "TABLE"
+    VIEW            = "VIEW"
+    ROW             = "ROW"
+    PACKAGE         = "PACKAGE"
+    PROCEDURE       = "PROCEDURE"
+    FUNCTION        = "FUNCTION"
+    RECORD          = "RECORD"
+
+
+class OracleObject:
+    def __init__(self, db, object_name, object_type):
+        self.__db = db
+        self.__name = self.renaming(object_name)
+        self.__type = object_type
+
+    def renaming(self, name):
+        return name
+
+    @property
+    def db(self):
+        return self.__db
+
+    @property
+    def name(self):
+        return self.__name
+
+    @property
+    def ora_object_type(self):
+        return self.__type
+
+
+### Exception ##################################################################
+
+class ObjectError(sibilla.DatabaseError):
+    """
+    Defines an error specific to object lookup within the Oracle database
+    associated to an Database object.
+    """
+    pass
+
+
+class ObjectLookupError(ObjectError):
+    """Raised when an object lookup fails."""
+    pass
+
+
+class ObjectTypeError(ObjectError):
+    """Problems with Oracle object types."""
+    pass
+
 
 from .table         import Table
 from .view          import View
@@ -6,8 +61,6 @@ from .row           import Row
 from .procedure     import Procedure
 from .function      import Function
 from .package       import Package
-
-from .cached        import Cached
 
 _type_mapping = {
     ObjectType.TABLE                : Table
@@ -18,16 +71,7 @@ _type_mapping = {
    ,ObjectType.PACKAGE              : Package
 }
 
-### Exception ##################################################################
-
-class DatabaseObjectError(Exception):
-    """
-    Defines an error specific to object lookup within the Oracle database
-    associated to an Database object.
-    """
-    pass
-
-################################################################################
+# -----------------------------------------------------------------------------
 
 class ObjectLookup(Cached):
     """
@@ -36,7 +80,7 @@ class ObjectLookup(Cached):
     attributes of an instance of this class.
 
     Every instance of Database comes with a default ObjectLookup instance
-    accessible through the read-only property ``object_lookup``. This can be
+    accessible through the read-only property ``__lookup__``. This can be
     used to specify the custom classes to handle general Oracle object, as well
     as specific items, like individual tables, packages, etc...
 
@@ -87,12 +131,12 @@ class ObjectLookup(Cached):
             >>> MyTable(Table):
             >>>     pass
             >>>
-            >>> db.object_lookup.replace({ObjectType.TABLE : MyTable})
+            >>> db.__lookup__.replace({ObjectType.TABLE : MyTable})
 
         Custom table classes can also be assigned to general attributes of an
         Database object by passing the attribute name as key in the dictionary:
 
-            >>> db.object_lookup.replace({"customer" : MyTable})
+            >>> db.__lookup__.replace({"customer" : MyTable})
 
         This way, the custom table class ``MyTable`` is used only when accessing
         the attribite ``customer`` from ``db`` rather than for every table.
@@ -102,7 +146,7 @@ class ObjectLookup(Cached):
     __custom_objects__ = {}
 
     def __init__(self, db):
-        super(ObjectLookup, self).__init__()
+        super().__init__()
 
         self.__db = db
 
@@ -139,58 +183,63 @@ class ObjectLookup(Cached):
 
         return name
 
+    @cachedmethod
     def __getattr__(self, name):
         name = self.renaming(name)
 
-        # Try to hit the cache
-        ret = self.get_cached(name)
-        if ret != None:
-            return ret
-
         # Look through custom objects first
-        if type(self).__custom_objects__ and name in list(type(self).__custom_objects__.keys()):
-            obj_cls = type(self).__custom_objects__[name]
+        if name in type(self).__custom_objects__:
+            object_class = type(self).__custom_objects__[name]
 
         else: # Return standard object
-            # TODO: Uniqueness check needed!
-            obj_type = self.__db.fetch_one(
+            object_type = self.__db.fetch_many(
                 """
                 select object_type
                 from   all_objects
-                where  object_name     = upper(:obj_name)
+                where  object_name     = upper(:object_name)
                    and object_type    != 'SYNONYM'
                    and subobject_name is null
-                """, obj_name = name)
+                """,
+                n = 2,
+                object_name = name
+            )
 
-            if obj_type is None:
-                raise DatabaseObjectError("No object named '{}' in the database".format(name))
-            obj_cls = self.map(obj_type[0])
+            if not object_type:
+                raise ObjectLookupError("No such object: '{}'".format(name))
 
-        ret = obj_cls(self.__db, name)
+            if len(object_type) != 1:
+                # TODO: handle with disambiguator
+                raise ObjectLookupError(
+                    "Multiple objects returned for name '{}'".format(name)
+                )
 
-        # Cache the restult
-        self.cache(name, ret)
-        return ret
+            object_class = self.get_class(object_type[0][0])
+
+        return object_class(self.__db, name)
 
     @classmethod
-    def map(cls, type_name):
+    def get_class(cls, type_name):
         """
         Returns the class associated with the given type or attribute.
 
         Args:
-            type_name (str): The type name to map. This is meant to be either
-                one of the values exposed by the ``ObjectType`` class, or a
-                custom attribute.
-
+            type_name (str): The type name to whose associated class is to be
+                retrieved. This is meant to be either one of the values exposed
+                by the ``ObjectType`` class, or a custom attribute.
 
         Returns:
             class: The class associated with the given type/attribute.
         """
 
         try:
-            return cls.__custom_objects__[type_name] if type_name in cls.__custom_objects__ else _type_mapping[type_name]
+            return cls.__custom_objects__[type_name] \
+                if type_name in cls.__custom_objects__ \
+                else _type_mapping[type_name]
+
         except KeyError:
-            raise TypeError('Unhandled request for object type "{}".'.format(type_name))
+            raise ObjectTypeError(
+                'Object type not supported: {}.'.format(type_name)
+            )
 
     @classmethod
     def replace(cls, types):

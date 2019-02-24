@@ -1,6 +1,6 @@
 import cx_Oracle
 
-from .oracle_object import OracleObject
+from sibilla.object import OracleObject
 
 from .cached import Cached
 

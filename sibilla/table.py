@@ -1,4 +1,4 @@
-from .oracle_object import ObjectType, OracleObject
+from sibilla.object import ObjectType, OracleObject
 from .row import NoSuchRowException
 from functools import update_wrapper
 
@@ -128,7 +128,7 @@ class Table(OracleObject):
                     kwargs
                 )
 
-                row_object_handler = self.db.object_lookup.map(ObjectType.ROW)
+                row_object_handler = self.db.__lookup__.get_class(ObjectType.ROW)
                 return row_object_handler(self, matching_conditions)
 
             except TypeError:
@@ -167,7 +167,7 @@ class Table(OracleObject):
                 )
 
             try:
-                row_object_handler = self.db.object_lookup.map(ObjectType.ROW)
+                row_object_handler = self.db.__lookup__.get_class(ObjectType.ROW)
                 return row_object_handler(
                     self,
                     dict(list(zip(self.__pk__, pk)))
