@@ -232,9 +232,16 @@ class ObjectLookup(Cached):
         """
 
         try:
-            return cls.__custom_objects__[type_name] \
+            requested_class = cls.__custom_objects__[type_name] \
                 if type_name in cls.__custom_objects__ \
                 else _type_mapping[type_name]
+
+            if not requested_class:
+                raise ObjectLookupError(
+                    "No class configured for type " + type_name
+                )
+                
+            return requested_class
 
         except KeyError:
             raise ObjectTypeError(

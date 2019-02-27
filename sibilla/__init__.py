@@ -83,7 +83,7 @@ class CursorRow:
             self._max_col_len = max([len(c) for c in self._cols])
 
         return "\n".join([
-            ("{:" + str(self._max_col_len) + "} : ").format(c) + self._state[c]
+            ("{:"+str(self._max_col_len)+"} : ").format(c)+str(self._state[c])
             for c in self._cols
         ])
 
@@ -222,7 +222,6 @@ class Database(cx_Oracle.Connection, Cached):
         """
 
         columns = [c[0] for c in cursor.description]
-
         for row in cursor:
             yield CursorRow(columns, row)
 
@@ -368,7 +367,6 @@ class Database(cx_Oracle.Connection, Cached):
         Returns:
             cx_Oracle.cursor: the cursor associated with the code execution.
         """
-
         if args and kwargs:
             raise InterfaceError(
                 "Expecting positional argument or keyword arguments, but not"
