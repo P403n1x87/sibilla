@@ -6,7 +6,6 @@ from sibilla.caching import Cached, cachedmethod
 class ObjectType(type):
     TABLE           = "TABLE"
     VIEW            = "VIEW"
-    ROW             = "ROW"
     PACKAGE         = "PACKAGE"
     PROCEDURE       = "PROCEDURE"
     FUNCTION        = "FUNCTION"
@@ -57,7 +56,6 @@ class ObjectTypeError(ObjectError):
 
 from .table         import Table
 from .view          import View
-from .row           import Row
 from .procedure     import Procedure
 from .function      import Function
 from .package       import Package
@@ -65,7 +63,6 @@ from .package       import Package
 _type_mapping = {
     ObjectType.TABLE                : Table
    ,ObjectType.VIEW                 : View
-   ,ObjectType.ROW                  : Row
    ,ObjectType.PROCEDURE            : Procedure
    ,ObjectType.FUNCTION             : Function
    ,ObjectType.PACKAGE              : Package
@@ -232,9 +229,16 @@ class ObjectLookup(Cached):
         """
 
         try:
-            return cls.__custom_objects__[type_name] \
+            requested_class = cls.__custom_objects__[type_name] \
                 if type_name in cls.__custom_objects__ \
                 else _type_mapping[type_name]
+
+            if not requested_class:
+                raise ObjectLookupError(
+                    "No class configured for type " + type_name
+                )
+
+            return requested_class
 
         except KeyError:
             raise ObjectTypeError(
