@@ -95,7 +95,7 @@ class CursorRow:
         return tuple([self.state[c] for c in self.cols])
 
 
-class Database(cx_Oracle.Connection, Cached):
+class Database(cx_Oracle.Connection):
     """
     A subclass of the DB API specification-compliant cx_Oracle.Connection
     object, extended with additional features proper of Oracle Databases (11g
@@ -192,14 +192,12 @@ class Database(cx_Oracle.Connection, Cached):
 
             raise DatabaseError(msg) from e
 
-        Cached.__init__(self)
-
-        self._object_lookup = ObjectLookup(self)
+        self._default_lookup = ObjectLookup(self)
+        self.cache = self._default_lookup.cache
 
         # Enable standard streams
         self.dbms_output.enable()
 
-    @cachedmethod
     def __getattr__(self, name):
         return getattr(self.__lookup__, name, None)
 
@@ -373,13 +371,17 @@ class Database(cx_Oracle.Connection, Cached):
                 "both"
             )
 
-        cursor = self.cursor()
-        if args:
-            cursor.execute(stmt, args)
-        else:
-            cursor.execute(stmt, **kwargs)
+        try:
+            cursor = self.cursor()
+            if args:
+                cursor.execute(stmt, args)
+            else:
+                cursor.execute(stmt, **kwargs)
 
-        return cursor
+            return cursor
+
+        except cx_Oracle.DatabaseError as e:
+            raise DatabaseError(e) from e
 
     # TODO: This can use Function._Function__datatype_mapping to map python
     #       types to Oracle types.
@@ -425,7 +427,7 @@ class Database(cx_Oracle.Connection, Cached):
         ``ObjectLookup`` class for examples.
         """
 
-        return self._object_lookup
+        return self._default_lookup
 
     @__lookup__.setter
     def __lookup__(self, value):

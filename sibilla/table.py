@@ -3,6 +3,7 @@ from functools import update_wrapper
 from sibilla import DatabaseError
 from sibilla.object import ObjectType, OracleObject
 
+
 class TableError(DatabaseError):
     """Table-related database error."""
     pass
@@ -10,6 +11,10 @@ class TableError(DatabaseError):
 
 class TableEntryError(TableError):
     """Raised when failed to access a table entry."""
+    pass
+
+
+class TableInsertError(TableError):
     pass
 
 
@@ -28,7 +33,7 @@ def rowmethod(func):
     return staticmethod(update_wrapper(wrapper=method_wrapper, wrapped=func))
 
 
-def rowattr(func):
+def rowattribute(func):
     return property(func)
 
 # ------------------------------------------------------------------------------
@@ -100,7 +105,7 @@ class Table(OracleObject):
         name = name if name else self.__table__
 
         if name is None:
-            raise TableError("Cannot determine table name.")
+            raise TableError("No table name given")
 
         super().__init__(db, name, ObjectType.TABLE)
         if self.__pk__ is None:
@@ -142,7 +147,7 @@ class Table(OracleObject):
 
             self.__fk__ = {k.lower(): v.lower() for k, v in fk_list}
 
-    def __call__(self, pk=None, _id=None, **kwargs):
+    def __call__(self, pk=None, **kwargs):
         """Make an Oracle Table a callable object whose return value is a Row
         object referencing a row in the table by the table's primary key.
 
@@ -152,8 +157,6 @@ class Table(OracleObject):
         Args:
             pk (scalar or iterable): A primary key value that identifies the
                 row
-            _id (scalar): Convenience argument for tables with a primary key on
-                column named ID.
             **kwargs: Arbitrary keyword arguments for other matching
                 conditions. The use of the WHERE clause is not allowed. In this
                 case use the either the ``fetch_one`` or ``fetch_all`` methods
@@ -164,37 +167,19 @@ class Table(OracleObject):
                 primary key or matching criteria.
         """
 
-        if pk is None and _id is None and not kwargs:
+        if pk is None and not kwargs:
             return self
 
         if pk is None:
-            try:
-                matching_conditions = (
-                    {'id': _id} if _id is not None else
-                    kwargs
-                )
-
-                return self.__row_class__(self, matching_conditions)
-
-            except TypeError:
-                if _id:
-                    raise ValueError(
-                        "No entry with ID = {}, or no column named "
-                        "ID in Table {}".format(_id, self.name.upper())
-                    )
-                else:
-                    raise ValueError(
-                        "sibilla: No data matching the given criteria in Table "
-                        + self.name.upper()
-                    )
+            return self.__row_class__(self, kwargs)
         else:
             if kwargs:
                 raise TableEntryError(
-                    "Attempted to filter by PK and additional conditions"
+                    "Cannot select by PK and additional conditions."
                 )
 
             if not self.__pk__:
-                raise ValueError(
+                raise PrimaryKeyError(
                     "No primary key constraint on table {}.".format(
                         self.name.upper()
                     )
@@ -287,6 +272,38 @@ class Table(OracleObject):
         self.db.plsql('drop table {}'.format(self.name))
         if flush_cache:
             self.db.cache.flush()
+
+    # TODO: Extend to allow bulk
+    def insert(self, values):
+        if isinstance(values, dict):
+            insert_columns = "(" + ", ".join(values.keys()) + ")"
+            insert_values = ", ".join([":" + k for k in values])
+            insert_kwargs = values
+
+        elif isinstance(values, tuple):
+            if len(values) != len(self.__cols__):
+                raise TableInsertError(
+                    "Wrong number of values to insert (expected {})".format(
+                        len(self.__cols__)
+                    )
+                )
+
+            insert_values = ", ".join([":" + k for k in self.__cols__])
+            insert_columns = ""
+            insert_kwargs = dict(list(zip(self.__cols__, values)))
+
+        else:
+            raise TableInsertError("Invalid type for values to insert.")
+
+        try:
+            self.db.plsql(
+                "insert into {} {} values ({})".format(
+                    self.name, insert_columns, insert_values
+                ),
+                **insert_kwargs
+            )
+        except DatabaseError as e:
+            raise TableInsertError(e) from e
 
     def truncate(self):
         self.db.plsql('truncate table {}'.format(self.name))

@@ -1,6 +1,8 @@
 import pytest
 
 from sibilla import Database
+from sibilla.object import ObjectType
+from sibilla.table import Table, rowmethod, rowattribute
 from sibilla.row import RowAttributeError, MultipleRowsError, NoSuchRowError, SmartRow
 
 USER = "g"
@@ -8,6 +10,19 @@ PASSWORD = "g"
 
 STUDENT_NO = "20060105"
 
+
+class CustomTable(Table):
+
+    @rowattribute
+    def first_column(row):
+        return getattr(row, row.__table__.__cols__[0])
+
+    @rowmethod
+    def get_first_column(row):
+        return row.first_column
+
+    def __repr__(self):
+        return "CustomTable({})".format(self.name)
 
 class TestRow:
 
@@ -21,6 +36,9 @@ class TestRow:
 
         with pytest.raises(NoSuchRowError):
             self.db.marks(student_no="NOSUCHSTUDENT")
+
+    def test_row_db(self):
+        assert self.db == self.db.students(STUDENT_NO).db
 
     def test_row_fields(self):
         student = self.db.students(STUDENT_NO)
@@ -42,10 +60,17 @@ class TestRow:
     def test_smart_row(self):
         self.db.cache.flush()
 
-        from sibilla.table import Table
         Table.set_row_class(SmartRow)
 
         assert self.db.marks(
             student_no=STUDENT_NO,
             module_code="CM0004"
         ).student_no.no == STUDENT_NO
+
+    def test_row_decorators(self):
+        self.db.__lookup__.replace({ObjectType.TABLE : CustomTable})
+        self.db.cache.flush()
+
+        student = self.db.students(STUDENT_NO)
+
+        assert student.get_first_column() == STUDENT_NO
