@@ -1,7 +1,7 @@
 import cx_Oracle
 from . import datatypes
 
-from .oracle_object import OracleObject, ObjectType
+from sibilla.object import OracleObject, ObjectType
 from .callable      import Callable, bool_to_char
 from .record        import Record
 

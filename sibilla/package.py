@@ -1,4 +1,4 @@
-from .oracle_object import *
+from sibilla.object import *
 from .record        import Record, PLSQLRecordError
 
 
@@ -27,8 +27,8 @@ class Package(OracleObject):
     def __init__(self, db, name):
         super(Package, self).__init__(db, name, ObjectType.PACKAGE)
 
-        self.func = CallableFactory(self.db, self.name, self.db.object_lookup.map(ObjectType.FUNCTION))
-        self.proc = CallableFactory(self.db, self.name, self.db.object_lookup.map(ObjectType.PROCEDURE))
+        self.func = CallableFactory(self.db, self.name, self.db.__lookup__.get_class(ObjectType.FUNCTION))
+        self.proc = CallableFactory(self.db, self.name, self.db.__lookup__.get_class(ObjectType.PROCEDURE))
 
     def __getattr__(self, name):
         name = self.renaming(name)
@@ -58,7 +58,7 @@ class Package(OracleObject):
         funcs = len(set(res))
         procs = tot - len(list(res))
 
-        ret = self.db.object_lookup.map(ObjectType.FUNCTION if funcs > 0 else ObjectType.PROCEDURE)(self.db, '{}.{}'.format(self.name, name))
+        ret = self.db.__lookup__.get_class(ObjectType.FUNCTION if funcs > 0 else ObjectType.PROCEDURE)(self.db, '{}.{}'.format(self.name, name))
 
         # TODO: Cache not under direct control
         self.__dict__[name] = ret

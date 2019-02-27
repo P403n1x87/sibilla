@@ -1,6 +1,6 @@
 # from .db            import Database
-# from .oracle_object import OracleObject, ObjectType
-# from .object_lookup import ObjectLookup, DatabaseObjectError
+# from sibilla.object import OracleObject, ObjectType
+# from .__lookup__ import ObjectLookup, DatabaseObjectError
 # from .table         import Table, rowattr, rowmethod
 # from .view          import View
 # from .row           import Row, TableFieldError
@@ -10,10 +10,7 @@
 
 import cx_Oracle
 
-from .caching import Cached, cachedmethod
-from .object_lookup import DatabaseObjectError, ObjectLookup
-from .oracle_object import ObjectType
-
+# ---- Module exceptions ----
 
 class SibillaError(Exception):
     """Base Sibilla exception."""
@@ -38,6 +35,11 @@ class IdentifierError(DatabaseError):
     pass
 
 
+from sibilla.caching import Cached, cachedmethod
+from sibilla.object import ObjectLookup, ObjectType
+
+# ---- Local helpers ----
+
 def sql_identifier(name: str) -> str:
     if name[0] == '"':
         if name[-1] != '"':
@@ -55,8 +57,6 @@ class CursorRow:
     first contains the key names (usually the column names) and the second the
     values associated to each key.
     """
-
-    # ---- OVERRIDES ----
 
     def __init__(self, columns, row):
         if type(columns) not in (list, tuple) \
@@ -90,8 +90,6 @@ class CursorRow:
     def __dir__(self):
         return self._cols
 
-    # ---- PROPERTIES ----
-
     @property
     def values(self):
         return tuple([self.state[c] for c in self.cols])
@@ -113,7 +111,7 @@ class Database(cx_Oracle.Connection, Cached):
 
             ...
 
-            >>> db = Database(username, password, dsn)
+            >>> db = Database(username, password, dsn=TNS)
 
     The class has built-in introspection for Oracle objects, like Tables,
     Views, Functions, Procedures and Packages.
@@ -196,21 +194,6 @@ class Database(cx_Oracle.Connection, Cached):
 
         Cached.__init__(self)
 
-        # Try to subscribe to changes
-        self._verbose = True  # kwargs.pop("verbose", False)
-
-        try:
-            self._subscr = self.subscribe(callback=self._event_allops)
-        except TypeError:  # cx_Oracle.DatabaseError:
-            self._subscr = None
-            if self._verbose:
-                # TODO: Turn into logging
-                print(
-                    "sibilla.WARNING  ***  Unable to subscribe to changes to"
-                    "the database. The internal cache might be unreliable if"
-                    "there are concurrent processes on the database.\n"
-                )
-
         self._object_lookup = ObjectLookup(self)
 
         # Enable standard streams
@@ -218,19 +201,7 @@ class Database(cx_Oracle.Connection, Cached):
 
     @cachedmethod
     def __getattr__(self, name):
-        # Use the internal object lookup
-        try:
-            return getattr(self.object_lookup, name, None)
-        except ValueError:
-            # TODO:
-            raise AttributeError(
-                "Unable to handle object name '{}'".format(name)
-            )
-
-    # ---- STATIC METHODS ----
-
-    def _event_allops(self, msg):
-        self.cache.flush()
+        return getattr(self.__lookup__, name, None)
 
     # ---- PUBLIC METHODS ----
 
@@ -447,7 +418,7 @@ class Database(cx_Oracle.Connection, Cached):
         raise AttributeError("'session_user' is read-only.")
 
     @property
-    def object_lookup(self):
+    def __lookup__(self):
         """
         Read-only attribute. An internal ``ObjectLookup`` object to describe
         how to discover database objects. The default classes can be overridden
@@ -458,6 +429,6 @@ class Database(cx_Oracle.Connection, Cached):
 
         return self._object_lookup
 
-    @object_lookup.setter
-    def object_lookup(self, value):
-        raise AttributeError("'object_lookup' is a read-only property.")
+    @__lookup__.setter
+    def __lookup__(self, value):
+        raise AttributeError("'__lookup__' is a read-only property.")

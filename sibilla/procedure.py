@@ -1,4 +1,4 @@
-from .oracle_object import OracleObject, ObjectType
+from sibilla.object import OracleObject, ObjectType
 from .callable import Callable
 
 class Procedure(OracleObject, Callable):
