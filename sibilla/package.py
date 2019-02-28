@@ -1,35 +1,36 @@
-from sibilla.object import *
-from .record        import Record, PLSQLRecordError
+from sibilla import DatabaseError
 
+from sibilla.callable import CallableFactory
+from sibilla.caching import Cached, cachedmethod
+from sibilla.object import OracleObject, ObjectType
+# from .record import Record, PLSQLRecordError
 
-#TODO: Might be Cached?
-class CallableFactory(object):
-    def __init__(self, db, pkg_name, call_type):
-        self.__db = db
-        self.__pkg_name = pkg_name
-        self.__type = call_type
+# ---- Exceptions -------------------------------------------------------------
 
-    def __getattr__(self, name):
-        ret = self.__type(self.__db, '{}.{}'.format(self.__pkg_name, name))
-        self.__dict__[name] = ret
-        return ret
-
+class PackageAttributeError(DatabaseError):
+    pass
 
 # -----------------------------------------------------------------------------
 
+class Package(OracleObject, Cached):
 
-class PackageAttributeError(Exception):
-    pass
+    __slots__ = []
 
-
-#TODO: Might be Cached?
-class Package(OracleObject):
     def __init__(self, db, name):
-        super(Package, self).__init__(db, name, ObjectType.PACKAGE)
+        super().__init__(db, name, ObjectType.PACKAGE)
+        Cached.__init__(self)
 
-        self.func = CallableFactory(self.db, self.name, self.db.__lookup__.get_class(ObjectType.FUNCTION))
-        self.proc = CallableFactory(self.db, self.name, self.db.__lookup__.get_class(ObjectType.PROCEDURE))
+        self.func = CallableFactory(
+            self.db.__lookup__.get_class(ObjectType.FUNCTION),
+            self
+        )
 
+        self.proc = CallableFactory(
+            self.db.__lookup__.get_class(ObjectType.PROCEDURE),
+            self
+        )
+
+    @cachedmethod
     def __getattr__(self, name):
         name = self.renaming(name)
 
@@ -38,13 +39,18 @@ class Package(OracleObject):
             select count(*)
             from   all_procedures
             where  object_name    = upper(:pkg_name)
-               and procedure_name = upper(:name)""", name = name, pkg_name = self.name)[0]
-        if tot == 0:
+               and procedure_name = upper(:name)
+        """, name=name, pkg_name=self.name)[0]
+
+        if not tot:
             # Look for records
-            try:
-                return Record(self.db, "{}.{}".format(self.name, name))
-            except PLSQLRecordError:
-                raise PackageAttributeError("No object '{}' within package '{}'".format(name, self.name))
+            # try:
+            #     return Record(self.db, "{}.{}".format(self.name, name))
+            # except PLSQLRecordError:
+            #     raise PackageAttributeError("No object '{}' within package '{}'".format(name, self.name))
+            raise PackageAttributeError("No callable {} within {}".format(
+                name, self
+            ))
 
         # This reliably returns functions
         res = self.db.fetch_all("""
@@ -53,14 +59,16 @@ class Package(OracleObject):
             where  object_name  = upper(:name)
                and package_name = upper(:pkg_name)
                and position     = 0
-               and defaulted    = 'N'""", name = name, pkg_name = self.name)
+               and defaulted    = 'N'
+        """, name=name, pkg_name=self.name)
 
         funcs = len(set(res))
         procs = tot - len(list(res))
 
-        ret = self.db.__lookup__.get_class(ObjectType.FUNCTION if funcs > 0 else ObjectType.PROCEDURE)(self.db, '{}.{}'.format(self.name, name))
+        callable_class = self.db.__lookup__.get_class(
+            ObjectType.FUNCTION if funcs else ObjectType.PROCEDURE
+        )
+        return callable_class(self.db, name, self)
 
-        # TODO: Cache not under direct control
-        self.__dict__[name] = ret
-
-        return ret
+    def __repr__(self):
+        return "<package {}>".format(self.name.upper())
