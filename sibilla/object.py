@@ -15,7 +15,7 @@ class ObjectType(type):
 class OracleObject:
     def __init__(self, db, object_name, object_type):
         self.__db = db
-        self.__name = self.renaming(object_name)
+        self.__name = sibilla.sql_identifier(self.renaming(object_name))
         self.__type = object_type
 
     def renaming(self, name):
@@ -30,7 +30,7 @@ class OracleObject:
         return self.__name
 
     @property
-    def ora_object_type(self):
+    def object_type(self):
         return self.__type
 
 
@@ -194,7 +194,7 @@ class ObjectLookup(Cached):
                 select object_type
                 from   all_objects
                 where  object_name     = upper(:object_name)
-                   and object_type    != 'SYNONYM'
+                   and object_type not in ('SYNONYM', 'PACKAGE BODY')
                    and subobject_name is null
                 """,
                 n = 2,

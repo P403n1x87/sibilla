@@ -1,13 +1,14 @@
 from sibilla.object import OracleObject, ObjectType
-from .callable import Callable
+from sibilla.callable import Callable
 
-class Procedure(OracleObject, Callable):
-    def __init__(self, db, name):
-        super(Procedure, self).__init__(db, name, ObjectType.PROCEDURE)
+
+class Procedure(Callable):
+
+    __slots__ = []
+
+    def __init__(self, db, name, package=None):
+        super().__init__(db, name, ObjectType.PROCEDURE, package)
 
     def __call__(self, *args, **kwargs):
         cur = self.db.cursor()
-        cur.callproc(self.name, args, kwargs)
-
-    def __repr__(self):
-        return "<procedure {}>".format(self.name)
+        cur.callproc(self.callable_name, args, kwargs)

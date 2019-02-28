@@ -49,10 +49,13 @@ class SynchronizedTTLCache(cachetools.TTLCache):
 class Cached:
     """Cache mixin for adding synchronised TTL caching support to objects."""
 
-    def __init__(self):
+    def __init__(self, cache=None):
         """
         Initialise the instance with a ``cache`` attribute.
 
+        Optionally, a cache object can be passed that will be used instead of
+        the default one.
+
         Call ``flush`` on ``cache`` to force a flush of the cache.
         """
-        self.cache = SynchronizedTTLCache()
+        self.cache = cache if cache else SynchronizedTTLCache()

@@ -1,63 +1,64 @@
 import cx_Oracle
-from . import datatypes
+from sibilla import datatypes
 
 from sibilla.object import OracleObject, ObjectType
-from .callable      import Callable, bool_to_char
-from .record        import Record
+from sibilla.callable import Callable, CallableError
+from sibilla.record import Record
 
 
-class Function(OracleObject, Callable):
+class Function(Callable):
+
     __datatype_mapping = datatypes.mapping
 
-    def __init__(self, db, name):
-        super(Function, self).__init__(db, name, ObjectType.FUNCTION)
+    __slots__ = []
 
-        path = self.name.split('.')
-        if len(path) == 1:
-            func_name = self.name
-            pkg_name  = None
-        else:
-            pkg_name, func_name = path[-2:]
-
-        self.pkg_name = pkg_name
-        self.__name__ = func_name
+    def __init__(self, db, name, package=None):
+        super().__init__(db, name, ObjectType.FUNCTION, package)
 
         # Try to determine the return type
-        if pkg_name == None:
-            res = self.db.fetch_all("""
-                SELECT pls_type, data_type
-                FROM   all_arguments
-                where  object_name   = :func_name
-                   and package_name  is null
-                   and argument_name is null
-                   and position      = 0""", func_name = func_name.upper())
+        bind_variables = {"func_name": self.name}
+        if package is None:
+            package_query = "is null"
         else:
-            res = self.db.fetch_all("""
-                SELECT pls_type, data_type
-                FROM   all_arguments
-                where  object_name   = :func_name
-                   and package_name  = :pkg_name
-                   and argument_name is null
-                   and position      = 0""", func_name = func_name.upper(), pkg_name = pkg_name.upper())
+            package_query = "= :pkg_name"
+            bind_variables["pkg_name"] = package.name
 
-        res = list(res)
+        res = list(self.db.fetch_all("""
+            select pls_type, data_type
+            from   all_arguments
+            where  object_name   = :func_name
+               and package_name  {}
+               and argument_name is null
+               and position      = 0
+        """.format(package_query), **bind_variables))
+
         values = [e.values for e in res]
+
         if not values:
-            raise ValueError("The function return values are not available from ALL_ARGUMENTS")
+            raise CallableError(
+                "No such function: {}".format(self.callable_name)
+            )
 
         elif len(set(values)) == 1:
-            ret_type = res[0][1] if res[0][0] is None else res[0][0]
+            ret_type = res[0].data_type \
+                if res[0].pls_type is None \
+                else res[0].pls_type
 
             if "CURSOR" in ret_type:
                 self.__ret_type = "CURSOR"
-            elif "RECORD" in ret_type:
-                # TODO: Return the function call as a string of PL/SQL code to
-                #       feed to the Record class.
-                self.__ret_type = "RECORD"
+            # elif "RECORD" in ret_type:
+            #     # TODO: Return the function call as a string of PL/SQL code to
+            #     #       feed to the Record class.
+            #     self.__ret_type = "RECORD"
             else:
                 self.__ret_type = ret_type
-            self.__ora_ret_type = Function.__datatype_mapping[self.__ret_type] if self.__ret_type in Function.__datatype_mapping else (getattr(cx_Oracle, self.__ret_type, None))
+
+            self.__ora_ret_type = self.__datatype_mapping.get(
+                self.__ret_type,
+                getattr(cx_Oracle, self.__ret_type, None)
+            )
         else:
+            self.__ret_type = set([v[0] for v in values])
             self.__ora_ret_type = None
 
     @property
@@ -66,45 +67,82 @@ class Function(OracleObject, Callable):
 
     def __call__(self, *args, **kwargs):
         ret_type = kwargs.pop("ret_type", None)
-        if ret_type == None and self.__ora_ret_type == None:
-            raise ValueError("A return type must be specified for function '{}'.".format(self.name))
+
+        if ret_type is None and self.__ora_ret_type is None:
+            # TODO: The kwargs can be used to discriminate
+            raise CallableError(
+                "Explicit return value type required for {}".format(self)
+            )
 
         # Type override
-        if ret_type != None:
-            ora_ret_type = Function.__datatype_mapping[repr(ret_type)] if repr(ret_type) in list(Function.__datatype_mapping.keys()) else ret_type
+        if ret_type is not None:
+            ora_ret_type = self.__datatype_mapping.get(
+                repr(ret_type),
+                ret_type
+            )
         else:
             ora_ret_type = self.__ora_ret_type
 
         # Begin execution
         cur = self.db.cursor()
 
-        if ora_ret_type in (bool, cx_Oracle.BOOLEAN) and self.has_bool_args(*args, **kwargs):
-            # For boolean functions with boolean arguments, Cursor.execute
-            # cannot accept bool variables
-            stmt = "begin :o_ret_val := case {} when true then '+' when false then '-' end; end;".format(self.to_string(*args, **kwargs))
+        # ---- NOTE -----------------------------------------------------------
+        # This code is no longer required with cx_Oracle 7
+        # ---------------------------------------------------------------------
+        # if ora_ret_type in (bool, cx_Oracle.BOOLEAN) \
+        #     and has_bool_args(args, kwargs):
+        #     # For boolean functions with boolean arguments, Cursor.execute
+        #     # cannot accept bool variables
+        #     stmt = """begin
+        #         :o_ret_val := case {}
+        #             when true then '+'
+        #             when false then '-'
+        #         end;
+        #     end;""".format(self.to_string(args, kwargs))
+        #
+        #     # Replace boolean variables with literal PL/SQL booleans
+        #     for i in range(len(args)):
+        #         if isinstance(args[i], bool):
+        #             stmt = stmt.replace(
+        #                 ":{}{}".format(
+        #                     Callable.__positional_bind_var_prefix__, i
+        #                 ),
+        #                 bool_to_char(args[i])
+        #             )
+        #
+        #     # Replace boolean variables with literal PL/SQL booleans
+        #     for k, v in kwargs.items():
+        #         if isinstance(v, bool):
+        #             stmt = stmt.replace(
+        #                 ":" + k,
+        #                 bool_to_char(v)
+        #             )
+        #
+        #     args = [a for a in args if not isinstance(a, bool)]
+        #     kwargs = {
+        #         k: v for k, v in kwargs.items() if not isinstance(v, bool)
+        #     }
+        #
+        #     o_ret_val = self.db.var(cx_Oracle.STRING)
+        #     kwargs["o_ret_val"] = o_ret_val
+        #     for i in range(len(args)):
+        #         k = Callable.__positional_bind_var_prefix__ + str(i)
+        #         kwargs[k] = args[i]
+        #
+        #     self.db.plsql(stmt, **kwargs)
+        #
+        #     ret = o_ret_val.getvalue()
+        #
+        #     if ret == '+':
+        #         return True
+        #     if ret == '-':
+        #         return False
+        #     return None
+        # ---------------------------------------------------------------------
 
-            for i in range(len(args)):
-                if type(args[i]) == bool:
-                    stmt = stmt.replace(":{}{}".format(Callable.__positional_bind_var_prefix__, i), bool_to_char(args[i]))
-
-            for k in kwargs:
-                if type(kwargs[k]) == bool:
-                    stmt = stmt.replace(":{}".format(k), bool_to_char(kwargs[k]))
-
-            args   = [a for a in args if type(a) != bool]
-            kwargs = {k : kwargs[k] for k in kwargs if type(kwargs[k]) != bool}
-
-            o_ret_val = cur.var(cx_Oracle.STRING)
-            kwargs.update({"o_ret_val" : o_ret_val})
-            kwargs.update({"{}{}".format(Callable.__positional_bind_var_prefix__, i) : args[i] for i in range(len(args))})
-            cur.execute(stmt, **kwargs)
-            if o_ret_val:
-                ret = o_ret_val.getvalue()
-                if ret == '+': return True
-                if ret == '-': return False
-            return ret
-
-        # TODO: Support for Records is not complete
+        # ---- TODO -----------------------------------------------------------
+        # Support for Records is not complete
+        # ---------------------------------------------------------------------
         # elif ora_ret_type == datatypes.Record or self.has_record_args(*args, **kwargs):
         #     declare, block = self.record_args(*args, **kwargs)
         #     if ora_ret_type == datatypes.Record:
@@ -120,7 +158,7 @@ class Function(OracleObject, Callable):
         #                    and prior object_name = object_name
         #                    and prior object_type = object_type
         #             order by   usage_id
-        #             """, name = self.func_name, obj_name = self.pkg_name if self.pkg_name != None else self.func_name, obj_type = 'PACKAGE' if self.pkg_name != None else 'FUNCTION')
+        #             """, name = self.func_name, obj_name = self.pkg_name if self.pkg_name is not None else self.func_name, obj_type = 'PACKAGE' if self.pkg_name is not None else 'FUNCTION')
         #
         #         if len(rec_type) == 2:
         #             pkg = self.pkg_name
@@ -159,10 +197,15 @@ class Function(OracleObject, Callable):
         #         print stmt
         #         cur.execute(stmt, o_ret_val = o_ret_val)
         #         ret       = o_ret_val.getvalue()
-        else:
-            ret = cur.callfunc(self.name, ora_ret_type, args, kwargs)
+        # ---------------------------------------------------------------------
 
-        self.__ret_type = ret_type
-        self.__ora_ret_type = ora_ret_type
+        # else:
+        try:
+            return cur.callfunc(self.callable_name, ora_ret_type, args, kwargs)
+        except cx_Oracle.DatabaseError as e:
+            raise CallableError(e) from e
 
-        return ret
+        # self.__ret_type = ret_type
+        # self.__ora_ret_type = ora_ret_type
+
+        # return ret

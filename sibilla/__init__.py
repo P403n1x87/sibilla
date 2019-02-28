@@ -92,7 +92,7 @@ class CursorRow:
 
     @property
     def values(self):
-        return tuple([self.state[c] for c in self.cols])
+        return tuple([self._state[c] for c in self._cols])
 
 
 class Database(cx_Oracle.Connection):
@@ -223,7 +223,7 @@ class Database(cx_Oracle.Connection):
         for row in cursor:
             yield CursorRow(columns, row)
 
-    def get_errors(self, name = None, type = None):
+    def get_errors(self, name=None, type=None):
         """
         Returns all the occurred errors in the form of CursorRow with the
         fields _name_, _type_, _line_, _position_, _error_ and _text_. The
