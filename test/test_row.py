@@ -2,8 +2,9 @@ import pytest
 
 from sibilla import Database
 from sibilla.object import ObjectType
-from sibilla.table import Table, rowmethod, rowattribute
-from sibilla.row import RowAttributeError, MultipleRowsError, NoSuchRowError, SmartRow
+from sibilla.table import Table
+from sibilla.dataset import rowmethod, rowattribute
+from sibilla.dataset import RowAttributeError, MultipleRowsError, NoSuchRowError, SmartRow
 
 USER = "g"
 PASSWORD = "g"
@@ -15,7 +16,7 @@ class CustomTable(Table):
 
     @rowattribute
     def first_column(row):
-        return getattr(row, row.__table__.__cols__[0])
+        return getattr(row, row.__dataset__.__cols__[0])
 
     @rowmethod
     def get_first_column(row):

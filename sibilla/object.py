@@ -33,6 +33,8 @@ class OracleObject:
     def object_type(self):
         return self.__type
 
+    def __repr__(self):
+        return "<{} '{}'>".format(self.__type.lower(), self.__name)
 
 ### Exception ##################################################################
 

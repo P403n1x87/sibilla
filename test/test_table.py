@@ -1,6 +1,7 @@
 import pytest
 
 from sibilla import ConnectionError, Database, LoginError, DatabaseError
+from sibilla.dataset import QueryError
 from sibilla.object import ObjectLookupError
 from sibilla.table import PrimaryKeyError, TableError, TableEntryError, TableInsertError, Table
 
@@ -20,7 +21,7 @@ class TestTable:
 
     def test_cols(self):
         assert self.db.students.__cols__ == [
-            'no', 'surname', 'forename'
+            'NO', 'SURNAME', 'FORENAME'
         ]
 
     def test_pk(self):
@@ -57,7 +58,7 @@ class TestTable:
 
         assert not list(self.db.marks.fetch_all(where="1=0"))
 
-        with pytest.raises(TableError):
+        with pytest.raises(QueryError):
             self.db.marks.fetch_all(
                 select=["module_code", "mark"],
                 where={
@@ -123,6 +124,8 @@ class TestTable:
 
         assert len(list(self.db.drop_me)) == 2
 
+        self.db.commit()
+        
         # ---- Test truncate ----
         self.db.drop_me.truncate()
         assert len(list(self.db.drop_me)) == 0

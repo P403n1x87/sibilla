@@ -263,7 +263,7 @@ class Database(cx_Oracle.Connection):
               where  attribute = 'ERROR'
                  and 0 = line
             ) {where}
-            order by upper(name) asc, type asc, sequence asc
+            order by name asc, type asc, sequence asc
             """.format(
                 where=(
                     "where " + " and ".join(where_list)) if where_list else ""
@@ -366,8 +366,8 @@ class Database(cx_Oracle.Connection):
             cx_Oracle.cursor: the cursor associated with the code execution.
         """
         if args and kwargs:
-            raise InterfaceError(
-                "Expecting positional argument or keyword arguments, but not"
+            raise DatabaseError(
+                "Expecting positional argument or keyword arguments, but not "
                 "both"
             )
 
@@ -397,10 +397,10 @@ class Database(cx_Oracle.Connection):
         cur = self.cursor()
         return cur.var(var_type)
 
-    def commit(self, reset_cache = True):
-        super(Database, self).commit()
+    def commit(self, flush_cache=True):
+        super().commit()
 
-        if reset_cache:
+        if flush_cache:
             self.cache.flush()
 
     # ---- PROPERTIES ----
@@ -408,9 +408,8 @@ class Database(cx_Oracle.Connection):
     @property
     def session_user(self):
         """Returns the session user for the connection."""
-
         return self.fetch_one(
-            "SELECT SYS_CONTEXT ('USERENV', 'SESSION_USER') FROM DUAL"
+            "select sys_context('userenv', 'session_user') from dual"
         )[0]
 
     @session_user.setter

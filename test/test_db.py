@@ -1,6 +1,6 @@
 import pytest
 
-from sibilla import ConnectionError, Database, LoginError
+from sibilla import ConnectionError, Database, LoginError, DatabaseError
 
 USER = "g"
 PASSWORD = "g"
@@ -19,6 +19,10 @@ class TestDB:
 
     def test_connection_user(self):
         assert self.db.session_user.lower() == USER
+        with pytest.raises(AttributeError):
+            self.db.session_user = "gab"
+        with pytest.raises(AttributeError):
+            self.db.__lookup__ = None
 
     def test_output(self):
         self.db.dbms_output.put_line("Hello World!")
@@ -31,6 +35,7 @@ class TestDB:
             where  object_name    = :obj_name
                and procedure_name = :proc_name
             """, obj_name = "DBMS_OUTPUT", proc_name = "PUT_LINE")
+        assert repr(res) == "PROCEDURE_NAME : PUT_LINE"
         assert res[0] == "PUT_LINE"
 
         res = self.db.fetch_one("""
@@ -63,8 +68,10 @@ class TestDB:
             "begin dbms_output.put_line(:msg); end;",
             msg='Hello PLSQL'
         )
-
         assert self.db.get_output()
+
+        with pytest.raises(DatabaseError):
+            self.db.plsql("select sysdate from dual", 10, a=20)
 
     def test_get_errors(self):
         self.db.plsql("""
@@ -74,7 +81,7 @@ class TestDB:
                 invalid_identifier;
             end;
         """)
-        errors = list(self.db.get_errors())
+        errors = list(self.db.get_errors(name='%', type='%'))
         assert len(errors) == 2
 
         error = errors[0]

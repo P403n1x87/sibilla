@@ -107,7 +107,7 @@ class Callable(OracleObject):
         )
 
     def __repr__(self):
-        return "<{} {}{}>".format(
+        return "<{} '{}'{}>".format(
             self.object_type.lower(),
             self.name,
             " from " + repr(self.package) if self.package else ""

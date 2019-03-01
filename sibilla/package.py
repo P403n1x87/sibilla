@@ -69,6 +69,3 @@ class Package(OracleObject, Cached):
             ObjectType.FUNCTION if funcs else ObjectType.PROCEDURE
         )
         return callable_class(self.db, name, self)
-
-    def __repr__(self):
-        return "<package {}>".format(self.name.upper())

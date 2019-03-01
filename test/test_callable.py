@@ -70,4 +70,4 @@ class TestCallable:
 
     def test_callable_repr(self):
         assert repr(self.db.dbms_output.put_line) == \
-            "<procedure PUT_LINE from <package DBMS_OUTPUT>>"
+            "<procedure 'PUT_LINE' from <package 'DBMS_OUTPUT'>>"
