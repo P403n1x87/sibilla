@@ -22,6 +22,16 @@ class TestCallable:
         self.db.print(MESSAGE)
         assert MESSAGE in self.db.get_output()
 
+        assert getattr(self.db, '"CamelCase"')
+
+        def enquote(s):
+            if s[0] == s[-1] == '_':
+                return '"{}"'.format(s[1:-1])
+            return s
+        self.db.__lookup__.renaming = enquote
+
+        assert self.db._CamelCase_
+
     def test_stored_function(self):
         assert self.db.len(MESSAGE) == len(MESSAGE)
 

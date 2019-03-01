@@ -1,6 +1,9 @@
 import pytest
 
 from sibilla import ConnectionError, Database, LoginError, DatabaseError
+from sibilla import CursorRow, CursorRowError
+from sibilla import sql_identifier, IdentifierError
+
 
 USER = "g"
 PASSWORD = "g"
@@ -91,12 +94,32 @@ class TestDB:
         self.db.plsql("drop procedure with_errors")
         assert not list(self.db.get_errors())
 
-    # ---- Exceptional tests ----
+    def test_sql_indentifier(self):
+        assert sql_identifier("caseInsensitive") == "CASEINSENSITIVE"
+        assert sql_identifier('"CaseSensitive"') == '"CaseSensitive"'
+        with pytest.raises(IdentifierError):
+            sql_identifier('"Invalid')
+        with pytest.raises(IdentifierError):
+            sql_identifier('Invalid"')
+        with pytest.raises(IdentifierError):
+            sql_identifier('"')
+        with pytest.raises(IdentifierError):
+            sql_identifier('')
+
+
+    def test_cursor_row(self):
+        with pytest.raises(CursorRowError):
+            CursorRow(("Col",), None)
+
+        with pytest.raises(CursorRowError):
+            CursorRow(("Col", ), (12, 10))
 
     def test_db_login_error(self):
         with pytest.raises(LoginError):
             Database("invalid", "user", "XE")
 
     def test_db_connection_error(self):
+        with pytest.raises(DatabaseError):
+            Database(USER, PASSWORD, "XE", mode=-100)
         with pytest.raises(ConnectionError):
             Database(USER, PASSWORD, "EX")

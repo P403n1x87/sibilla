@@ -56,11 +56,11 @@ class ObjectTypeError(ObjectError):
     pass
 
 
-from .table         import Table
-from .view          import View
-from .procedure     import Procedure
-from .function      import Function
-from .package       import Package
+from sibilla.table import Table
+from sibilla.view import View
+from sibilla.procedure import Procedure
+from sibilla.function import Function
+from sibilla.package import Package
 
 _type_mapping = {
     ObjectType.TABLE                : Table
@@ -184,30 +184,30 @@ class ObjectLookup(Cached):
 
     @cachedmethod
     def __getattr__(self, name):
-        name = self.renaming(name)
+        name = sibilla.sql_identifier(self.renaming(name)).strip('"')
 
         # Look through custom objects first
-        if name in type(self).__custom_objects__:
-            object_class = type(self).__custom_objects__[name]
+        try:
+            object_class = self.__custom_objects__[name]
 
-        else: # Return standard object
+        except KeyError: # Return standard object
             object_type = self.__db.fetch_many(
                 """
                 select object_type
                 from   all_objects
-                where  object_name     = upper(:object_name)
+                where  object_name = :object_name
                    and object_type not in ('SYNONYM', 'PACKAGE BODY')
                    and subobject_name is null
                 """,
-                n = 2,
-                object_name = name
+                n=2,
+                object_name=name
             )
 
             if not object_type:
                 raise ObjectLookupError("No such object: '{}'".format(name))
 
             if len(object_type) != 1:
-                # TODO: handle with disambiguator
+                # TODO: handle with disambiguator?
                 raise ObjectLookupError(
                     "Multiple objects returned for name '{}'".format(name)
                 )
@@ -216,8 +216,7 @@ class ObjectLookup(Cached):
 
         return object_class(self.__db, name)
 
-    @classmethod
-    def get_class(cls, type_name):
+    def get_class(self, type_name):
         """
         Returns the class associated with the given type or attribute.
 
@@ -231,24 +230,16 @@ class ObjectLookup(Cached):
         """
 
         try:
-            requested_class = cls.__custom_objects__[type_name] \
-                if type_name in cls.__custom_objects__ \
-                else _type_mapping[type_name]
-
-            if not requested_class:
-                raise ObjectLookupError(
-                    "No class configured for type " + type_name
-                )
-
-            return requested_class
-
+            return self.__custom_objects__.get(
+                type_name,
+                _type_mapping[type_name]
+            )
         except KeyError:
             raise ObjectTypeError(
                 'Object type not supported: {}.'.format(type_name)
             )
 
-    @classmethod
-    def replace(cls, types):
+    def replace(self, types):
         """
         Overrides the classes used to handle types/attributes on the lookup
         instance.
@@ -261,4 +252,6 @@ class ObjectLookup(Cached):
                 by the ``ObjectType`` class as key values.
         """
 
-        cls.__custom_objects__.update(types)
+        self.__custom_objects__.update({
+            sibilla.sql_identifier(k): v for k, v in types.items()
+        })

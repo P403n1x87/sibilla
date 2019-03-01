@@ -44,6 +44,13 @@ begin
 end;
 /
 
+create or replace procedure "CamelCase"
+is
+begin
+  null;
+end;
+/
+
 -------------------------------------------------------------------------------
 
 create or replace package callable_package

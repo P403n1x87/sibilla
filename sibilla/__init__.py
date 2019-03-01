@@ -34,6 +34,9 @@ class IdentifierError(DatabaseError):
     """SQL identifier error."""
     pass
 
+class CursorRowError(SibillaError):
+    pass
+
 
 from sibilla.caching import Cached, cachedmethod
 from sibilla.object import ObjectLookup, ObjectType
@@ -41,9 +44,14 @@ from sibilla.object import ObjectLookup, ObjectType
 # ---- Local helpers ----
 
 def sql_identifier(name: str) -> str:
+    if (
+        not name
+        or name == '"'
+        or (len(name) > 1 and len((name[0] + name[-1]).strip('"')) & 1)
+    ):
+        raise IdentifierError("Invalid identifier: " + name)
+
     if name[0] == '"':
-        if name[-1] != '"':
-            raise IdentifierError("Invalid identifier: " + name)
         return name
 
     return name.upper()
@@ -63,10 +71,10 @@ class CursorRow:
                 or type(row) not in (list, tuple) \
                 or len(columns) != len(row):
 
-            if row is None:
-                raise ValueError("None is not a valid row.")
+            if not row:
+                raise CursorRowError("Invalid row values.")
 
-            raise ValueError("Invalid row object")
+            raise CursorRowError("Columns-values mismatch.")
 
         self._cols = columns
         self._state = dict(list(zip(columns, row)))
