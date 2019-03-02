@@ -25,12 +25,12 @@ class Function(Callable):
 
         res = list(self.db.fetch_all("""
             select pls_type, data_type
-            from   all_arguments
+            from   {}_arguments
             where  object_name   = :func_name
                and package_name  {}
                and argument_name is null
                and position      = 0
-        """.format(package_query), **bind_variables))
+        """.format(self.db.__scope__, package_query), **bind_variables))
 
         values = [e.values for e in res]
 

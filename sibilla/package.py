@@ -37,10 +37,10 @@ class Package(OracleObject, Cached):
         # No of procedures and functions
         tot = self.db.fetch_one("""
             select count(*)
-            from   all_procedures
+            from   {}_procedures
             where  object_name    = upper(:pkg_name)
                and procedure_name = upper(:name)
-        """, name=name, pkg_name=self.name)[0]
+        """.format(self.db.__scope__), name=name, pkg_name=self.name)[0]
 
         if not tot:
             # Look for records
@@ -55,12 +55,12 @@ class Package(OracleObject, Cached):
         # This reliably returns functions
         res = self.db.fetch_all("""
             select pls_type
-            from   all_arguments
+            from   {}_arguments
             where  object_name  = upper(:name)
                and package_name = upper(:pkg_name)
                and position     = 0
                and defaulted    = 'N'
-        """, name=name, pkg_name=self.name)
+        """.format(self.db.__scope__), name=name, pkg_name=self.name)
 
         funcs = len(set(res))
         procs = tot - len(list(res))

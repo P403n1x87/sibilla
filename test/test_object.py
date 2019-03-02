@@ -24,11 +24,11 @@ class TestObject:
         cls.db = Database(USER, PASSWORD, "XE", events=True)
 
         cls.db.plsql("""
-            create procedure user_objects is begin null; end;
+            create procedure user_tables is begin null; end;
         """)
 
     def teardown_class(cls):
-        cls.db.plsql("drop procedure user_objects")
+        cls.db.plsql("drop procedure user_tables")
 
     def test_object(self):
         assert self.db.all_objects
@@ -39,13 +39,20 @@ class TestObject:
 
     def test_multiple_objects(self):
         with pytest.raises(ObjectLookupError):
-            self.db.user_objects
+            self.db.user_tables
 
     def test_custom_table(self):
         self.db.__lookup__.replace({"modules": Modules})
         self.db.cache.flush()
 
-        assert self.db.modules("CM0004").description == 'CM0004: Graphics'
+        assert self.db.modules["CM0004"].description == 'CM0004: Graphics'
+
+    def test_scope(self):
+        self.db.set_scope(Database.Scope.USER)
+        self.db.cache.flush()
+        self.db.callable_package
+        with pytest.raises(ObjectLookupError):
+            self.db.dbms_output
 
     def test_unsupported_types(self):
         with pytest.raises(ObjectTypeError):

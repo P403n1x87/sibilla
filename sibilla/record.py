@@ -55,7 +55,7 @@ class Record(OracleObject):
 
         fields_res = self.db.fetch_all("""
             select     name, type
-            from       all_identifiers
+            from       {}_identifiers
             start with name        = :name
                    and type        = 'RECORD'
                    and object_name = :pkg_name
@@ -64,7 +64,8 @@ class Record(OracleObject):
                    and prior object_name = object_name
                    and prior object_type = object_type
             order by   usage_id
-            """, name = self.rec_name, pkg_name = self.pkg_name)[1:]
+            """.format(self.db.__scope__), \
+            name=self.rec_name, pkg_name=self.pkg_name)[1:]
 
         if not fields_res:
             raise PLSQLRecordError("No record named '{}' within package '{}'".format(self.rec_name, self.pkg_name))

@@ -33,6 +33,9 @@ class RowGetterError(Exception):
 
 # -----------------------------------------------------------------------------
 
+from sibilla import CursorRow
+
+
 class Row(Cached):
 
     __slots__ = []
@@ -47,6 +50,9 @@ class Row(Cached):
 
     @cachedmethod
     def _get_record(self):
+        if isinstance(self.__kwargs, CursorRow):
+            return self.__kwargs
+
         res = self.__dataset__.fetch_many(
             2,
             where=({k: ":" + k for k in self.__kwargs},),
@@ -68,15 +74,7 @@ class Row(Cached):
                 )
             )
 
-        try:
-            record = res[0]
-            pk = {
-                k: getattr(record, k) for k in self.__dataset__.__pk__
-            } if self.__dataset__.__pk__ else None
-        except AttributeError:
-            pk = None
-
-        return record, pk
+        return res[0]
 
     @property
     def db(self):
@@ -115,36 +113,10 @@ class Row(Cached):
                     )
 
     def __field__(self, name):
-        record, _ = self._get_record()
-        return getattr(record, name)
-
-    @property
-    def __pk__(self):
-        _, pk = self._get_record()
-        return pk
+        return getattr(self._get_record(), name)
 
     def __repr__(self):
-        _, pk = self._get_record()
-        ident = "with PK '{}'".format(
-            str(pk)
-        ) if pk is not None else "at {}".format(id(self))
-        return "<row from {} {}>".format(self.__dataset__, ident)
-
-
-class SmartRow(Row):
-
-    __slots__ = []
-
-    def get(self, name, default=None):
-        try:
-            foreign_table = self.__dataset__.__fk__[name]
-            return getattr(self.__dataset__.db, foreign_table)(
-                self.__field__(name)
-            )
-        except (KeyError, AttributeError):
-            # Not a foreign key or no foreign key on dataset
-            raise RowGetterError()
-
+        return "<row from {}>".format(self.__dataset__)
 
 # ---- Decorators -------------------------------------------------------------
 
@@ -220,11 +192,33 @@ class DataSet:
     def set_row_class(cls, row_class):
         cls.__row_class__ = row_class
 
+    def _get_generator(self, kwargs):
+        for row in self.fetch_all(
+            where=({k: ":" + k for k in kwargs},),
+            **kwargs
+        ):
+            yield self.__row_class__(self, row)
+
     def __call__(self, **kwargs):
+        """Make an Oracle Table a callable object whose return value is a Row
+        object referencing a row in the table by the table's primary key.
+
+        One can also specify some other matching criteria, provided they will
+        uniquely identify a row
+
+        Args:
+            **kwargs: Arbitrary keyword arguments for other matching
+                conditions. The use of the WHERE clause is not allowed. In this
+                case use the either the ``fetch_one`` or ``fetch_all`` methods
+                directly instead.
+
+        Returns:
+            generator: TODO
+        """
         if not kwargs:
             return self
 
-        return self.__row_class__(self, kwargs)
+        return self._get_generator(kwargs)
 
     def _generate_select_statement(self, select="*", where=None, order_by=None):
         where_stmt = ("where " + _generate_where_statement(where)) \

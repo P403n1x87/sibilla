@@ -106,7 +106,6 @@ class TestDB:
         with pytest.raises(IdentifierError):
             sql_identifier('')
 
-
     def test_cursor_row(self):
         with pytest.raises(CursorRowError):
             CursorRow(("Col",), None)

@@ -194,11 +194,11 @@ class ObjectLookup(Cached):
             object_type = self.__db.fetch_many(
                 """
                 select object_type
-                from   all_objects
+                from   {}_objects
                 where  object_name = :object_name
                    and object_type not in ('SYNONYM', 'PACKAGE BODY')
                    and subobject_name is null
-                """,
+                """.format(self.__db.__scope__),
                 n=2,
                 object_name=name
             )

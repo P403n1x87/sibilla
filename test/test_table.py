@@ -82,21 +82,20 @@ class TestTable:
         assert not self.db.marks.fetch_one(where="1=0")
 
     def test_call(self):
-        assert self.db.students("20060105")
-
         assert self.db.students() == self.db.students
+        assert len(list(self.db.marks(module_code="CM0003"))) == 3
 
-        with pytest.raises(TableEntryError):
-            self.db.students("20060105", surname="name")
-
-        with pytest.raises(PrimaryKeyError):
-            self.db.students([1, 2])
+    def test_pk(self):
+        assert self.db.students["20060105"]
 
         with pytest.raises(PrimaryKeyError):
-            self.db.students("20060155")
+            self.db.students[[1, 2]]
 
         with pytest.raises(PrimaryKeyError):
-            self.db.marks("no_pk")
+            self.db.students["20060155"]
+
+        with pytest.raises(PrimaryKeyError):
+            self.db.marks["no_pk"]
 
     def test_describe(self):
         assert len(self.db.students.describe()) == 3
@@ -125,7 +124,7 @@ class TestTable:
         assert len(list(self.db.drop_me)) == 2
 
         self.db.commit()
-        
+
         # ---- Test truncate ----
         self.db.drop_me.truncate()
         assert len(list(self.db.drop_me)) == 0

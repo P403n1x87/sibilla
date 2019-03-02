@@ -38,9 +38,6 @@ class CursorRowError(SibillaError):
     pass
 
 
-from sibilla.caching import Cached, cachedmethod
-from sibilla.object import ObjectLookup, ObjectType
-
 # ---- Local helpers ----
 
 def sql_identifier(name: str) -> str:
@@ -101,6 +98,10 @@ class CursorRow:
     @property
     def values(self):
         return tuple([self._state[c] for c in self._cols])
+
+# -----------------------------------------------------------------------------
+
+from sibilla.object import ObjectLookup, ObjectType
 
 
 class Database(cx_Oracle.Connection):
@@ -184,6 +185,13 @@ class Database(cx_Oracle.Connection):
 
             >>> db.foo.bar
     """
+
+    class Scope(type):
+        ALL = "all"
+        DBA = "dba"
+        USER = "user"
+
+    __scope__ = Scope.ALL
 
     def __init__(self, *args, **kwargs):
         try:
@@ -390,6 +398,9 @@ class Database(cx_Oracle.Connection):
 
         except cx_Oracle.DatabaseError as e:
             raise DatabaseError(e) from e
+
+    def set_scope(self, scope):
+        self.__scope__ = scope
 
     # TODO: This can use Function._Function__datatype_mapping to map python
     #       types to Oracle types.

@@ -16,10 +16,10 @@ class TestView:
     def test_view(self):
         assert repr(self.db.user_objects) == "<view 'USER_OBJECTS'>"
 
-        self.db.user_objects(
+        assert repr(list(self.db.user_objects(
             object_name="CALLABLE_PACKAGE",
             object_type="PACKAGE"
-        )
+        ))[0]) == "<row from <view 'USER_OBJECTS'>>"
 
     def test_base_class(self):
         with pytest.raises(ViewError):
