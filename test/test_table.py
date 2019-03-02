@@ -15,6 +15,17 @@ class TestTable:
     def setup_class(cls):
         cls.db = Database(USER, PASSWORD, "XE", events=True)
 
+        cls.db.plsql("""
+            create table test_slice(
+                id number(9),
+                constraint id#p primary key (id)
+            )
+        """)
+
+    @classmethod
+    def teardown_class(cls):
+        cls.db.test_slice.drop()
+
     def test_base_class(self):
         with pytest.raises(TableError):
             Table(self.db)
@@ -96,6 +107,18 @@ class TestTable:
 
         with pytest.raises(PrimaryKeyError):
             self.db.marks["no_pk"]
+
+        # Test slice
+        for i in range(20):
+            self.db.test_slice.insert((i,))
+
+        rows = list(self.db.test_slice[16:4:-2])
+        assert len(rows) == 6
+
+        j = 0
+        for i in range(16,4,-2):
+            assert rows[j].id == i
+            j += 1
 
     def test_describe(self):
         assert len(self.db.students.describe()) == 3

@@ -192,13 +192,6 @@ class DataSet:
     def set_row_class(cls, row_class):
         cls.__row_class__ = row_class
 
-    def _get_generator(self, kwargs):
-        for row in self.fetch_all(
-            where=({k: ":" + k for k in kwargs},),
-            **kwargs
-        ):
-            yield self.__row_class__(self, row)
-
     def __call__(self, **kwargs):
         """Make an Oracle Table a callable object whose return value is a Row
         object referencing a row in the table by the table's primary key.
@@ -215,10 +208,17 @@ class DataSet:
         Returns:
             generator: TODO
         """
+        def row_generator():
+            for row in self.fetch_all(
+                where=({k: ":" + k for k in kwargs},),
+                **kwargs
+            ):
+                yield self.__row_class__(self, row)
+        
         if not kwargs:
             return self
 
-        return self._get_generator(kwargs)
+        return row_generator()
 
     def _generate_select_statement(self, select="*", where=None, order_by=None):
         where_stmt = ("where " + _generate_where_statement(where)) \

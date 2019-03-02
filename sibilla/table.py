@@ -106,12 +106,7 @@ class Table(OracleObject, DataSet):
 
             self.__fk__ = {k.lower(): v.lower() for k, v in fk_list}
 
-    def __getitem__(self, pk):
-        if not self.__pk__:
-            raise PrimaryKeyError(
-                "No primary key constraint on table {}.".format(self.name)
-            )
-
+    def _get_by_pk(self, pk):
         if type(pk) not in (list, tuple):
             pk = (pk, )
 
@@ -133,6 +128,21 @@ class Table(OracleObject, DataSet):
                     self.name
                 )
             )
+
+    def __getitem__(self, pk):
+        def row_generator():
+            for n in range(pk.start, pk.stop, pk.step):
+                yield self._get_by_pk(n)
+
+        if not self.__pk__:
+            raise PrimaryKeyError(
+                "No primary key constraint on table {}.".format(self.name)
+            )
+
+        if isinstance(pk, slice):
+            return row_generator()
+        else:
+            return self._get_by_pk(pk)
 
     def drop(self, flush_cache=True):
         self.db.plsql('drop table {}'.format(self.name))
