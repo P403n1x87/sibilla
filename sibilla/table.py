@@ -1,6 +1,7 @@
 from sibilla import DatabaseError
 from sibilla.object import ObjectType, OracleObject
 
+# ---- Exceptions -------------------------------------------------------------
 
 class TableError(DatabaseError):
     """Table-related database error."""
@@ -20,6 +21,7 @@ class PrimaryKeyError(TableEntryError):
     """Raised when unable to make use of a primary key."""
     pass
 
+# -----------------------------------------------------------------------------
 
 from sibilla.dataset import Row, RowError, DataSet, RowGetterError
 
@@ -157,33 +159,48 @@ class Table(OracleObject, DataSet):
         if flush_cache:
             self.db.cache.flush()
 
-    # TODO: Extend to allow bulk
     def insert(self, values):
-        if isinstance(values, dict):
-            insert_columns = "(" + ", ".join(values.keys()) + ")"
-            insert_values = ", ".join([":" + k for k in values])
-            insert_kwargs = values
+        def generate_insert_stmt(v, gen_kwargs=True):
+            if isinstance(v, dict):
+                insert_columns = "(" + ", ".join(v.keys()) + ") "
+                insert_values = ", ".join([":" + k for k in v])
+                insert_kwargs = v if gen_kwargs else {}
 
-        elif isinstance(values, tuple):
-            if len(values) != len(self.__cols__):
-                raise TableInsertError(
-                    "Wrong number of values to insert (expected {})".format(
-                        len(self.__cols__)
+            elif isinstance(v, tuple):
+                if len(v) != len(self.__cols__):
+                    raise TableInsertError(
+                        "Wrong number of values to insert (expected {})".format(
+                            len(self.__cols__)
+                        )
                     )
+
+                insert_values = ", ".join([":" + k for k in self.__cols__])
+                insert_columns = ""
+                insert_kwargs = (
+                    dict(list(zip(self.__cols__, v))) if gen_kwargs else {}
                 )
 
-            insert_values = ", ".join([":" + k for k in self.__cols__])
-            insert_columns = ""
-            insert_kwargs = dict(list(zip(self.__cols__, values)))
+            else:
+                raise TableInsertError("Invalid type for values to insert.")
 
-        else:
-            raise TableInsertError("Invalid type for values to insert.")
+            return "insert into {} {}values ({})".format(
+                self.name, insert_columns, insert_values
+            ), insert_kwargs
+
+        if not values:
+            return
 
         try:
+            # TODO: executemany doesn't support generators yet.
+            #       See https://github.com/oracle/python-cx_Oracle/issues/200
+            is_list = isinstance(values, list)
+            insert_stmt, insert_kwargs = generate_insert_stmt(
+                values[0] if is_list else values,
+                not is_list
+            )
             self.db.plsql(
-                "insert into {} {} values ({})".format(
-                    self.name, insert_columns, insert_values
-                ),
+                insert_stmt,
+                batch=values if isinstance(values, list) else None,
                 **insert_kwargs
             )
         except DatabaseError as e:

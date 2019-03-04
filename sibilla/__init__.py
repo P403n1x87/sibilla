@@ -367,7 +367,7 @@ class Database(cx_Oracle.Connection):
         ]
 
     # TODO: Batch execute: https://blogs.oracle.com/opal/efficient-and-scalable-batch-statement-execution-in-python-cx_oracle
-    def plsql(self, stmt, *args, **kwargs):
+    def plsql(self, stmt, *args, batch=None, **kwargs):
         """
         Executes the provided (PL/)SQL code. Bind variables can be provided
         both as positional and as keyword arguments to this method. Returns
@@ -381,18 +381,27 @@ class Database(cx_Oracle.Connection):
         Returns:
             cx_Oracle.cursor: the cursor associated with the code execution.
         """
-        if args and kwargs:
+        c = 0
+        c += 1 if args else 0
+        c += 1 if kwargs else 0
+        c += 1 if batch else 0
+        if c > 1:
             raise DatabaseError(
-                "Expecting positional argument or keyword arguments, but not "
-                "both"
+                "Expecting either positional argument or keyword arguments or "
+                "batch."
             )
 
         try:
             cursor = self.cursor()
-            if args:
-                cursor.execute(stmt, args)
-            else:
+
+            # TODO: executemany doesn't support generators yet.
+            #       See https://github.com/oracle/python-cx_Oracle/issues/200
+            if batch:
+                cursor.executemany(stmt, batch)
+            elif kwargs:
                 cursor.execute(stmt, **kwargs)
+            else:
+                cursor.execute(stmt, args)
 
             return cursor
 

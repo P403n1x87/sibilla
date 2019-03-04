@@ -108,9 +108,7 @@ class TestTable:
         with pytest.raises(PrimaryKeyError):
             self.db.marks["no_pk"]
 
-        # Test slice
-        for i in range(20):
-            self.db.test_slice.insert((i,))
+        self.db.test_slice.insert([(i,) for i in range(20)])
 
         rows = list(self.db.test_slice[16:4:-2])
         assert len(rows) == 6
@@ -119,6 +117,11 @@ class TestTable:
         for i in range(16,4,-2):
             assert rows[j].id == i
             j += 1
+
+    def test_empty_insert(self):
+        self.db.test_slice.insert([])
+        self.db.test_slice.insert(tuple())
+        self.db.test_slice.insert({})
 
     def test_describe(self):
         assert len(self.db.students.describe()) == 3
