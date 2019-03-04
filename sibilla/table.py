@@ -63,8 +63,8 @@ class Table(OracleObject, DataSet):
     __row_class__ = TableRow
 
     __table__ = None
-    __pk__ = None
-    __fk__ = None
+    __pk = None
+    __fk = None
 
     def __init__(self, db, name=None):
         name = name if name else self.__table__
@@ -74,8 +74,10 @@ class Table(OracleObject, DataSet):
 
         super().__init__(db, name, ObjectType.TABLE)
 
-        if self.__pk__ is None:
-            self.__pk__ = [e[0] for e in self.db.fetch_all("""
+    @property
+    def __pk__(self):
+        if self.__pk is None:
+            self.__pk = [e[0] for e in self.db.fetch_all("""
                 select cols.column_name
                 from   {}_constraints  cons
                       ,{}_cons_columns cols
@@ -87,8 +89,12 @@ class Table(OracleObject, DataSet):
                 order by cols.position
                 """.format(*[self.db.__scope__] * 2), self.name)]
 
-        # TODO: Support arbitrary foreign keys
-        if self.__fk__ is None:
+        return self.__pk
+
+    @property
+    def __fk__(self):
+        if self.__fk is None:
+            # TODO: Support arbitrary foreign keys
             fk_list = self.db.fetch_all("""
                 select cols.column_name
                       ,cond.table_name
@@ -104,7 +110,9 @@ class Table(OracleObject, DataSet):
                 order by cols.position
                 """.format(*[self.db.__scope__] * 3), self.name)
 
-            self.__fk__ = {k.lower(): v.lower() for k, v in fk_list}
+            self.__fk = {k.lower(): v.lower() for k, v in fk_list}
+
+        return self.__fk
 
     def _get_by_pk(self, pk):
         if type(pk) not in (list, tuple):
