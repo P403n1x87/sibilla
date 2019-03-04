@@ -1,15 +1,12 @@
-#!/usr/bin/env python
-
 from setuptools import find_packages, setup
 
 setup(
     name         = 'sibilla',
-    version      = '2.1.0',
+    version      = '0.1.0',
     description  = 'Python ORM for the Oracle Database',
     author       = 'Gabriele N. Tornetta',
     author_email = 'phoenix1987@gmail.com',
     url          = 'https://github.com/P403n1x87/sibilla',
-
 
     classifiers=[
         'Development Status :: 5 - Stable',
