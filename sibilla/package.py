@@ -16,17 +16,19 @@ class Package(OracleObject, Cached):
 
     __slots__ = []
 
-    def __init__(self, db, name):
-        super().__init__(db, name, ObjectType.PACKAGE)
+    def __init__(self, db, name, schema):
+        super().__init__(db, name, ObjectType.PACKAGE, schema)
         Cached.__init__(self)
 
         self.func = CallableFactory(
             self.db.__lookup__.get_class(ObjectType.FUNCTION),
+            schema,
             self
         )
 
         self.proc = CallableFactory(
             self.db.__lookup__.get_class(ObjectType.PROCEDURE),
+            schema,
             self
         )
 
@@ -35,12 +37,19 @@ class Package(OracleObject, Cached):
         name = self.renaming(name)
 
         # No of procedures and functions
-        tot = self.db.fetch_one("""
+        tot, = self.db.fetch_one("""
             select count(*)
             from   {}_procedures
             where  object_name    = upper(:pkg_name)
                and procedure_name = upper(:name)
-        """.format(self.db.__scope__), name=name, pkg_name=self.name)[0]
+               {}
+        """.format(
+            "all" if self.__schema__ else self.db.__scope__,
+            ("and owner= '"+self.__schema__+"'") if self.__schema__ else ""
+        ),
+            name=name,
+            pkg_name=self.name
+        )
 
         if not tot:
             # Look for records
@@ -60,7 +69,11 @@ class Package(OracleObject, Cached):
                and package_name = upper(:pkg_name)
                and position     = 0
                and defaulted    = 'N'
-        """.format(self.db.__scope__), name=name, pkg_name=self.name)
+               {}
+        """.format(
+            "all" if self.__schema__ else self.db.__scope__,
+            ("and owner= '"+self.__schema__+"'") if self.__schema__ else ""
+        ), name=name, pkg_name=self.name)
 
         funcs = len(set(res))
         procs = tot - len(list(res))
@@ -68,4 +81,4 @@ class Package(OracleObject, Cached):
         callable_class = self.db.__lookup__.get_class(
             ObjectType.FUNCTION if funcs else ObjectType.PROCEDURE
         )
-        return callable_class(self.db, name, self)
+        return callable_class(self.db, name, self.__schema__, self)

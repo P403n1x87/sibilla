@@ -1,9 +1,9 @@
 import cx_Oracle
 from sibilla import datatypes
-
-from sibilla.object import OracleObject, ObjectType
 from sibilla.callable import Callable, CallableError
-from sibilla.record import Record
+from sibilla.object import ObjectType
+
+# from sibilla.record import Record
 
 
 class Function(Callable):
@@ -12,8 +12,8 @@ class Function(Callable):
 
     __slots__ = []
 
-    def __init__(self, db, name, package=None):
-        super().__init__(db, name, ObjectType.FUNCTION, package)
+    def __init__(self, db, name, schema, package=None):
+        super().__init__(db, name, ObjectType.FUNCTION, schema, package)
 
         # Try to determine the return type
         bind_variables = {"func_name": self.name}
@@ -30,7 +30,12 @@ class Function(Callable):
                and package_name  {}
                and argument_name is null
                and position      = 0
-        """.format(self.db.__scope__, package_query), **bind_variables))
+               {}
+        """.format(
+            "all" if self.__schema__ else self.db.__scope__,
+            package_query,
+            ("and owner= '"+self.__schema__+"'") if self.__schema__ else ""
+        ), **bind_variables))
 
         values = [e.values for e in res]
 
@@ -158,7 +163,7 @@ class Function(Callable):
         #                    and prior object_name = object_name
         #                    and prior object_type = object_type
         #             order by   usage_id
-        #             """, name = self.func_name, obj_name = self.pkg_name if self.pkg_name is not None else self.func_name, obj_type = 'PACKAGE' if self.pkg_name is not None else 'FUNCTION')
+        #             """, name = self.func_name, obj_name = self.pkg_name or self.func_name, obj_type = 'PACKAGE' if self.pkg_name is not None else 'FUNCTION')
         #
         #         if len(rec_type) == 2:
         #             pkg = self.pkg_name

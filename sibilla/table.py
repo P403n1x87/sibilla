@@ -23,7 +23,8 @@ class PrimaryKeyError(TableEntryError):
 
 # -----------------------------------------------------------------------------
 
-from sibilla.dataset import Row, RowError, DataSet, RowGetterError
+
+from sibilla.dataset import DataSet, Row, RowError, RowGetterError
 
 
 class TableRow(Row):
@@ -68,13 +69,13 @@ class Table(OracleObject, DataSet):
     __pk = None
     __fk = None
 
-    def __init__(self, db, name=None):
-        name = name if name else self.__table__
+    def __init__(self, db, name=None, schema=None):
+        name = name or self.__table__
 
         if name is None:
             raise TableError("No table name given")
 
-        super().__init__(db, name, ObjectType.TABLE)
+        super().__init__(db, name, ObjectType.TABLE, schema)
 
     @property
     def __pk__(self):
@@ -88,8 +89,13 @@ class Table(OracleObject, DataSet):
                    and cons.constraint_type = 'P'
                    and cons.constraint_name = cols.constraint_name
                    and cons.owner           = cols.owner
+                   {}
                 order by cols.position
-                """.format(*[self.db.__scope__] * 2), self.name)]
+                """.format(
+                    *["all" if self.__schema__ else self.db.__scope__] * 2,
+                    ("and owner = '"+self.__schema__+"'") if self.__schema__ else ""
+                ), self.name
+            )]
 
         return self.__pk
 
@@ -109,8 +115,14 @@ class Table(OracleObject, DataSet):
                    and cons.constraint_name = cols.constraint_name
                    and cons.owner           = cols.owner
                    and cond.constraint_name = cons.r_constraint_name
+                   {}
                 order by cols.position
-                """.format(*[self.db.__scope__] * 3), self.name)
+                """.format(
+                    *["all" if self.__schema__ else self.db.__scope__] * 3,
+                    ("and owner = '"+self.__schema__+"'") if self.__schema__ else ""
+
+                ), self.name
+            )
 
             self.__fk = {k.lower(): v.lower() for k, v in fk_list}
 

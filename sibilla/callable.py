@@ -4,26 +4,32 @@ from sibilla.object import OracleObject
 # from sibilla.record import RecordInstance as RecordI
 
 
-# ---- Exceptions ----
+# ---- Exceptions -------------------------------------------------------------
+
 
 class CallableError(DatabaseError):
     pass
 
+
 # -----------------------------------------------------------------------------
+
 
 class CallableFactory(Cached):
 
     __slots__ = []
 
-    def __init__(self, callable_class, package=None):
+    def __init__(self, callable_class, schema, package=None):
         super().__init__(package.cache if package else None)
 
         self.__class = callable_class
         self.__package = package
+        self.__schema = schema
 
     @cachedmethod
     def __getattr__(self, name):
-        return self.__class(self.__package.db, name, self.__package)
+        return self.__class(
+            self.__package.db, name, self.__schema, self.__package
+        )
 
 
 # def field_assignment(e, block, parent):
@@ -98,8 +104,8 @@ class CallableFactory(Cached):
 class Callable(OracleObject):
     """Base class for Procedure and Function."""
 
-    def __init__(self, db, name, type, package=None):
-        super().__init__(db, name, type)
+    def __init__(self, db, name, type, schema, package=None):
+        super().__init__(db, name, type, schema)
 
         self.package = package
         self.callable_name = (

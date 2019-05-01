@@ -1,22 +1,22 @@
 import sibilla
-
 from sibilla.caching import Cached, cachedmethod
 
 
 class ObjectType(type):
-    TABLE           = "TABLE"
-    VIEW            = "VIEW"
-    PACKAGE         = "PACKAGE"
-    PROCEDURE       = "PROCEDURE"
-    FUNCTION        = "FUNCTION"
-    RECORD          = "RECORD"
+    TABLE = "TABLE"
+    VIEW = "VIEW"
+    PACKAGE = "PACKAGE"
+    PROCEDURE = "PROCEDURE"
+    FUNCTION = "FUNCTION"
+    RECORD = "RECORD"
 
 
 class OracleObject:
-    def __init__(self, db, object_name, object_type):
+    def __init__(self, db, object_name, object_type, schema):
         self.__db = db
         self.__name = sibilla.sql_identifier(self.renaming(object_name))
         self.__type = object_type
+        self.__schema = schema
 
     def renaming(self, name):
         return name
@@ -33,10 +33,20 @@ class OracleObject:
     def object_type(self):
         return self.__type
 
-    def __repr__(self):
-        return "<{} '{}'>".format(self.__type.lower(), self.__name)
+    @property
+    def __schema__(self):
+        return self.__schema
 
-### Exception ##################################################################
+    def __repr__(self):
+        return "<{} '{}'{}>".format(
+            self.__type.lower(),
+            self.__name,
+            " from schema '" + self.__schema + "'" if self.__schema else ""
+        )
+
+
+# ---- Exceptions -------------------------------------------------------------
+
 
 class ObjectError(sibilla.DatabaseError):
     """
@@ -56,21 +66,27 @@ class ObjectTypeError(ObjectError):
     pass
 
 
-from sibilla.table import Table
-from sibilla.view import View
-from sibilla.procedure import Procedure
+# -----------------------------------------------------------------------------
+
+
 from sibilla.function import Function
 from sibilla.package import Package
+from sibilla.procedure import Procedure
+from sibilla.schema import Schema, SchemaError
+from sibilla.table import Table
+from sibilla.view import View
+
 
 _type_mapping = {
-    ObjectType.TABLE                : Table
-   ,ObjectType.VIEW                 : View
-   ,ObjectType.PROCEDURE            : Procedure
-   ,ObjectType.FUNCTION             : Function
-   ,ObjectType.PACKAGE              : Package
+    ObjectType.TABLE: Table,
+    ObjectType.VIEW: View,
+    ObjectType.PROCEDURE: Procedure,
+    ObjectType.FUNCTION: Function,
+    ObjectType.PACKAGE: Package,
 }
 
 # -----------------------------------------------------------------------------
+
 
 class ObjectLookup(Cached):
     """
@@ -137,11 +153,12 @@ class ObjectLookup(Cached):
 
             >>> db.__lookup__.replace({"customer" : MyTable})
 
-        This way, the custom table class ``MyTable`` is used only when accessing
-        the attribite ``customer`` from ``db`` rather than for every table.
-        Observe that this is NOT the same as assigning ``MyTable`` directly to
-        the attribute ``customer`` of ``db``.
+        This way, the custom table class ``MyTable`` is used only when
+        accessing the attribite ``customer`` from ``db`` rather than for every
+        table. Observe that this is NOT the same as assigning ``MyTable``
+        directly to the attribute ``customer`` of ``db``.
     """
+
     __custom_objects__ = {}
 
     def __init__(self, db):
@@ -184,27 +201,43 @@ class ObjectLookup(Cached):
 
     @cachedmethod
     def __getattr__(self, name):
-        name = sibilla.sql_identifier(self.renaming(name)).strip('"')
+        qual_name = sibilla.sql_identifier(self.renaming(name)).strip('"')
+
+        # Check for schema
+        try:
+            schema, name = qual_name.split('.')
+        except ValueError:
+            schema = None
+            name = qual_name
 
         # Look through custom objects first
         try:
             object_class = self.__custom_objects__[name]
 
-        except KeyError: # Return standard object
+        except KeyError:  # Return standard object
             object_type = self.__db.fetch_many(
                 """
                 select object_type
-                from   {}_objects
+                from   {scope}_objects
                 where  object_name = :object_name
                    and object_type not in ('SYNONYM', 'PACKAGE BODY')
                    and subobject_name is null
-                """.format(self.__db.__scope__),
+                   {owner}
+                """.format(
+                    scope="all" if schema else self.__db.__scope__,
+                    owner=("and owner = '" + schema + "'") if schema else ""
+                ),
                 n=2,
                 object_name=name
             )
 
             if not object_type:
-                raise ObjectLookupError("No such object: '{}'".format(name))
+                try:
+                    return Schema(self.__db, name)
+                except SchemaError as e:
+                    raise ObjectLookupError(
+                        "No such object or schema: '{}'".format(name)
+                    ) from e
 
             if len(object_type) != 1:
                 # TODO: handle with disambiguator?
@@ -214,7 +247,7 @@ class ObjectLookup(Cached):
 
             object_class = self.get_class(object_type[0][0])
 
-        return object_class(self.__db, name)
+        return object_class(self.__db, name, schema)
 
     def get_class(self, type_name):
         """

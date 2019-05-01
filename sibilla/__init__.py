@@ -293,7 +293,7 @@ class Database(cx_Oracle.Connection):
         text = ""
 
         while True:
-            self.dbms_output.get_line(buf, status)
+            self.sys.dbms_output.get_line(buf, status)
             if int(status.getvalue()) > 0:
                 break  # Nothing left to read
             line = buf.getvalue()

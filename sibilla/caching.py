@@ -58,4 +58,4 @@ class Cached:
 
         Call ``flush`` on ``cache`` to force a flush of the cache.
         """
-        self.cache = cache if cache else SynchronizedTTLCache()
+        self.cache = cache or SynchronizedTTLCache()
