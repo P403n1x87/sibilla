@@ -75,3 +75,6 @@ venv.bak/
 
 # mkdocs documentation
 /site
+
+# local backup files
+*.bak

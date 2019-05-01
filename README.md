@@ -1,4 +1,4 @@
-<p align="center"><img src="art/sibilla_alt.svg" alt="Sibilla Logo"></p>
+<p align="center"><img src="art/sibilla.png" alt="Sibilla Logo"></p>
 <!-- <h1 align="center"> Sibilla</h1> -->
 
 <h3 align="center">Python ORM for the Oracle Database</h3>

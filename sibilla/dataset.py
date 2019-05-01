@@ -1,16 +1,15 @@
-import cx_Oracle
-
 from functools import update_wrapper
 
-from sibilla import DatabaseError
-from sibilla.object import OracleObject
-
+from sibilla import CursorRow, DatabaseError
 from sibilla.caching import Cached, cachedmethod
+from sibilla.object import OracleObject
 
 # -- Exceptions ---------------------------------------------------------------
 
+
 class RowError(DatabaseError):
     pass
+
 
 class NoSuchRowError(RowError):
     """Raised when no row matches the given conditions.
@@ -19,21 +18,23 @@ class NoSuchRowError(RowError):
     """
     pass
 
+
 class RowAttributeError(RowError):
     pass
+
 
 class MultipleRowsError(RowError):
     pass
 
+
 class QueryError(DatabaseError):
     pass
+
 
 class RowGetterError(Exception):
     pass
 
 # -----------------------------------------------------------------------------
-
-from sibilla import CursorRow
 
 
 class Row(Cached):
@@ -55,8 +56,7 @@ class Row(Cached):
 
         res = self.__dataset__.fetch_many(
             2,
-            where=({k: ":" + k for k in self.__kwargs},),
-            **self.__kwargs
+            where=(self.__kwargs,),
         )
 
         if len(res) > 1:
@@ -132,12 +132,15 @@ def rowattribute(func):
 
 # -----------------------------------------------------------------------------
 
-def _generate_where_statement(e, op=None):
+def _generate_where_statement(e, binds, op=None):
     def generate_condition(k, v):
+        key = k+str(len(binds))
+        binds[key] = v
+
         return '{} {} {}'.format(
             k,
             'like' if isinstance(v, str) and '%' in v else '=',
-            v
+            ":" + key
         )
 
     def group(s):
@@ -156,12 +159,12 @@ def _generate_where_statement(e, op=None):
 
     if isinstance(e, list):
         return group(
-            " or ".join([_generate_where_statement(i, " or ") for i in e])
+            " or ".join([_generate_where_statement(i, binds, " or ") for i in e])
         )
 
     if isinstance(e, tuple):
         return group(
-            " and ".join([_generate_where_statement(i, " and ") for i in e])
+            " and ".join([_generate_where_statement(i, binds, " and ") for i in e])
         )
 
 # def where_statement_from_kwargs(kwargs):
@@ -182,6 +185,7 @@ def _generate_where_statement(e, op=None):
 #         return where_statement_from_kwargs(kwargs)
 #
 #     return "{} and {}".format(where, where_statement_from_kwargs(kwargs))
+
 
 class DataSet:
 
@@ -210,18 +214,20 @@ class DataSet:
         """
         def row_generator():
             for row in self.fetch_all(
-                where=({k: ":" + k for k in kwargs},),
-                **kwargs
+                where=(kwargs,),
             ):
                 yield self.__row_class__(self, row)
-        
+
         if not kwargs:
             return self
 
         return row_generator()
 
-    def _generate_select_statement(self, select="*", where=None, order_by=None):
-        where_stmt = ("where " + _generate_where_statement(where)) \
+    def _generate_select_statement(
+        self, select="*", where=None, order_by=None
+    ):
+        binds = {}
+        where_stmt = ("where " + _generate_where_statement(where, binds)) \
             if where else ""
 
         return """
@@ -236,24 +242,45 @@ class DataSet:
                     " order by {}".format(order_by) if order_by is not None
                     else ""
                 )
+        ), binds
+
+    def _prepare_fetch(self, select, where, order_by, kwargs):
+        if not where and kwargs:
+            where = (kwargs,)
+            kwargs = {}
+
+        statement, binds = self._generate_select_statement(
+            select, where, order_by
         )
+        binds.update(kwargs)
+
+        return statement, binds
 
     def fetch_one(self, select="*", where=None, order_by=None, **kwargs):
+        statement, binds = self._prepare_fetch(
+            select, where, order_by, kwargs
+        )
         return self.db.fetch_one(
-            self._generate_select_statement(select, where, order_by),
-            **kwargs
+            statement,
+            **binds
         )
 
     def fetch_all(self, select="*", where=None, order_by=None, **kwargs):
+        statement, binds = self._prepare_fetch(
+            select, where, order_by, kwargs
+        )
         return self.db.fetch_all(
-            self._generate_select_statement(select, where, order_by),
-            **kwargs
+            statement,
+            **binds
         )
 
     def fetch_many(self, n, select="*", where=None, order_by=None, **kwargs):
+        statement, binds = self._prepare_fetch(
+            select, where, order_by, kwargs
+        )
         return self.db.fetch_many(
-            self._generate_select_statement(select, where, order_by),
-            n, **kwargs
+            statement,
+            n, **binds
         )
 
     def __iter__(self):

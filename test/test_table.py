@@ -1,9 +1,10 @@
 import pytest
 
-from sibilla import ConnectionError, Database, LoginError, DatabaseError
+from sibilla import ConnectionError, Database, DatabaseError, LoginError
 from sibilla.dataset import QueryError
 from sibilla.object import ObjectLookupError
-from sibilla.table import PrimaryKeyError, TableError, TableEntryError, TableInsertError, Table
+from sibilla.table import (PrimaryKeyError, Table, TableEntryError, TableError,
+                           TableInsertError)
 
 USER = "g"
 PASSWORD = "g"
@@ -53,16 +54,13 @@ class TestTable:
             select=["module_code", "mark"],
             where=[
                 ({
-                    'student_no': ':student',
-                    'module_code': ':module'
+                    'student_no': "20060101",
+                    'module_code': "CM0003"
                 },),
                 {
-                    'student_no' : ':other_student'
+                    'student_no': "20060105"
                 }
             ],
-            student="20060101",
-            module="CM0003",
-            other_student="20060105"
         )
 
         assert len(list(result)) == 4
@@ -73,24 +71,26 @@ class TestTable:
             self.db.marks.fetch_all(
                 select=["module_code", "mark"],
                 where={
-                    'student_no': ':student',
-                    'module_code': ':module'
+                    'student_no': "20060101",
+                    'module_code': "CM0003"
                 },
-                student="20060101",
-                module="CM0003",
             )
 
     def test_fetch_one(self):
         assert self.db.marks.fetch_one(
             where=({
-                'student_no': ':student',
-                'module_code': ':module'
+                'student_no': "20060101",
+                'module_code': "CM0003"
             },),
-            student="20060101",
-            module="CM0003",
         ).module_code == "CM0003"
 
         assert not self.db.marks.fetch_one(where="1=0")
+
+        assert self.db.marks.fetch_one(
+            student_no="20060101",
+            module_code="CM0003"
+        ).module_code == "CM0003"
+
 
     def test_call(self):
         assert self.db.students() == self.db.students
@@ -114,7 +114,7 @@ class TestTable:
         assert len(rows) == 6
 
         j = 0
-        for i in range(16,4,-2):
+        for i in range(16, 4, -2):
             assert rows[j].id == i
             j += 1
 
