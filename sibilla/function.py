@@ -45,11 +45,9 @@ class Function(Callable):
             )
 
         elif len(set(values)) == 1:
-            ret_type = res[0].data_type \
-                if res[0].pls_type is None \
-                else res[0].pls_type
+            ret_type = res[0].pls_type or res[0].data_type
 
-            if "CURSOR" in ret_type:
+            if "CURSOR" in ret_type or "CURSOR" in res[0].data_type:
                 self.__ret_type = "CURSOR"
             # elif "RECORD" in ret_type:
             #     # TODO: Return the function call as a string of PL/SQL code to
