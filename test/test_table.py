@@ -82,15 +82,23 @@ class TestTable:
                 'student_no': "20060101",
                 'module_code': "CM0003"
             },),
-        ).module_code == "CM0003"
+        ).module_code.code == "CM0003"
 
         assert not self.db.marks.fetch_one(where="1=0")
 
         assert self.db.marks.fetch_one(
             student_no="20060101",
             module_code="CM0003"
-        ).module_code == "CM0003"
+        ).module_code.code == "CM0003"
 
+    def test_fetch_many(self):
+        assert len(self.db.marks.fetch_many(
+            2,
+            where=({
+                'student_no': "20060101",
+                'module_code': "CM0003"
+            },),
+        )) == 1
 
     def test_call(self):
         assert self.db.students() == self.db.students

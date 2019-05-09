@@ -215,7 +215,7 @@ class ObjectLookup(Cached):
             object_class = self.__custom_objects__[name]
 
         except KeyError:  # Return standard object
-            object_type = self.__db.fetch_many(
+            _, object_type = self.__db._fetch_many(
                 """
                 select object_type
                 from   {scope}_objects

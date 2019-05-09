@@ -26,6 +26,10 @@ setup(
         'cachetools',
     ],
 
+    tests_require=[
+        'pandas',
+    ],
+
     project_urls={
         'Bug Reports': 'https://github.com/P403n1x87/sibilla/issues'
     },

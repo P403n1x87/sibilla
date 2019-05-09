@@ -1,8 +1,11 @@
 import pytest
 
+import cx_Oracle
+
 from sibilla import ConnectionError, Database, LoginError, DatabaseError
 from sibilla import CursorRow, CursorRowError
 from sibilla import sql_identifier, IdentifierError
+from sibilla.dataset import DataSet, Row
 
 
 USER = "g"
@@ -17,6 +20,8 @@ class TestDB:
 
     @classmethod
     def teardown_class(cls):
+        cls.db.set_row_wrapper(CursorRow)
+        DataSet.set_row_class(Row)
         if cls.db:
             cls.db.close()
 
@@ -32,12 +37,16 @@ class TestDB:
         assert self.db.get_output() == "Hello World!\n"
 
     def test_fetch(self):
-        res = self.db.fetch_one("""
+        res = self.db.fetch_one(
+            """
             select procedure_name
             from   all_procedures
             where  object_name    = :obj_name
                and procedure_name = :proc_name
-            """, obj_name = "DBMS_OUTPUT", proc_name = "PUT_LINE")
+            """,
+            obj_name="DBMS_OUTPUT",
+            proc_name="PUT_LINE"
+        )
         assert repr(res) == "PROCEDURE_NAME : PUT_LINE"
         assert res[0] == "PUT_LINE"
 
@@ -108,10 +117,10 @@ class TestDB:
 
     def test_cursor_row(self):
         with pytest.raises(CursorRowError):
-            CursorRow(("Col",), None)
+            CursorRow(None, None, ("Col",))
 
         with pytest.raises(CursorRowError):
-            CursorRow(("Col", ), (12, 10))
+            CursorRow(None, (12, 10), ("Col", ))
 
     def test_db_login_error(self):
         with pytest.raises(LoginError):
@@ -122,3 +131,11 @@ class TestDB:
             Database(USER, PASSWORD, "XE", mode=-100)
         with pytest.raises(ConnectionError):
             Database(USER, PASSWORD, "EX")
+
+    def test_no_wrapper(self):
+        self.db.set_row_wrapper(None)
+        DataSet.set_row_class(None)
+
+        assert isinstance(self.db.all_objects.fetch_all(), cx_Oracle.Cursor)
+        assert isinstance(self.db.user_objects.fetch_many(2), list)
+        assert isinstance(self.db.all_objects.fetch_one(), tuple)

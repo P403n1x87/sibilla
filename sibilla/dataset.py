@@ -4,7 +4,7 @@ from sibilla import CursorRow, DatabaseError
 from sibilla.caching import Cached, cachedmethod
 from sibilla.object import OracleObject
 
-# -- Exceptions ---------------------------------------------------------------
+# ---- Exceptions -------------------------------------------------------------
 
 
 class RowError(DatabaseError):
@@ -34,6 +34,7 @@ class QueryError(DatabaseError):
 class RowGetterError(Exception):
     pass
 
+
 # -----------------------------------------------------------------------------
 
 
@@ -54,14 +55,16 @@ class Row(Cached):
         if isinstance(self.__kwargs, CursorRow):
             return self.__kwargs
 
-        res = self.__dataset__.fetch_many(
-            2,
-            where=(self.__kwargs,),
-        )
+        if not isinstance(self.__kwargs, dict):
+            raise RowError(
+                f"Row class does not support data of type {type(self.__kwargs)}"
+            )
+        res = self.__dataset__.fetch_many(2, **self.__kwargs)
 
         if len(res) > 1:
             raise MultipleRowsError(
-                "Multiple rows returned by the matching criteria {} from {}.".format(
+                "Multiple rows returned by the matching criteria "
+                "{} from {}.".format(
                     self.__kwargs,
                     self.__dataset__
                 )
@@ -118,7 +121,9 @@ class Row(Cached):
     def __repr__(self):
         return "<row from {}>".format(self.__dataset__)
 
+
 # ---- Decorators -------------------------------------------------------------
+
 
 def rowmethod(func):
     def method_wrapper(row, *args, **kwargs):
@@ -131,6 +136,7 @@ def rowattribute(func):
 
 
 # -----------------------------------------------------------------------------
+
 
 def _generate_where_statement(e, binds, op=None):
     def generate_condition(k, v):
@@ -159,12 +165,16 @@ def _generate_where_statement(e, binds, op=None):
 
     if isinstance(e, list):
         return group(
-            " or ".join([_generate_where_statement(i, binds, " or ") for i in e])
+            " or ".join(
+                [_generate_where_statement(i, binds, " or ") for i in e]
+            )
         )
 
     if isinstance(e, tuple):
         return group(
-            " and ".join([_generate_where_statement(i, binds, " and ") for i in e])
+            " and ".join(
+                [_generate_where_statement(i, binds, " and ") for i in e]
+            )
         )
 
 # def where_statement_from_kwargs(kwargs):
@@ -212,16 +222,10 @@ class DataSet:
         Returns:
             generator: TODO
         """
-        def row_generator():
-            for row in self.fetch_all(
-                where=(kwargs,),
-            ):
-                yield self.__row_class__(self, row)
-
         if not kwargs:
             return self
 
-        return row_generator()
+        return self.fetch_all(**kwargs)
 
     def _generate_select_statement(
         self, select="*", where=None, order_by=None
@@ -260,28 +264,66 @@ class DataSet:
         statement, binds = self._prepare_fetch(
             select, where, order_by, kwargs
         )
-        return self.db.fetch_one(
+        result = self.db.fetch_one(
             statement,
             **binds
         )
+
+        if not result:
+            return None
+
+        try:
+            return (
+                self.__row_class__(self, result) if self.__row_class__
+                else result
+            )
+        except RowError as ex:
+            raise QueryError(
+                f"Row class {self.__row_class__} is incompatible with wrapped "
+                f"row type {type(result)}"
+            ) from ex
 
     def fetch_all(self, select="*", where=None, order_by=None, **kwargs):
         statement, binds = self._prepare_fetch(
             select, where, order_by, kwargs
         )
-        return self.db.fetch_all(
+        result = self.db.fetch_all(
             statement,
             **binds
         )
+        if self.__row_class__:
+            def row_generator():
+                for e in result:
+                    try:
+                        yield self.__row_class__(self, e)
+                    except RowError as ex:
+                        raise QueryError(
+                            f"Row class {self.__row_class__} is incompatible "
+                            f"with wrapped row type {type(e)}"
+                        ) from ex
+            return row_generator()
+        else:
+            return result
 
     def fetch_many(self, n, select="*", where=None, order_by=None, **kwargs):
         statement, binds = self._prepare_fetch(
             select, where, order_by, kwargs
         )
-        return self.db.fetch_many(
+        result = self.db.fetch_many(
             statement,
             n, **binds
         )
+        try:
+            return (
+                [self.__row_class__(self, row) for row in result]
+                if self.__row_class__
+                else result
+            )
+        except RowError as ex:
+            raise QueryError(
+                f"Row class {self.__row_class__} is incompatible with wrapped "
+                f"row type in collection {type(result)}"
+            ) from ex
 
     def __iter__(self):
         """Make a table iterable on its rows.
