@@ -70,6 +70,8 @@ is
 
   procedure print(what varchar2);
 
+  procedure mixed_arguments(num pls_integer, str varchar2, bool boolean);
+
 end callable_package;
 /
 
@@ -109,6 +111,12 @@ is
   begin
     dbms_output.put_line(what);
   end print;
+
+  procedure mixed_arguments(num pls_integer, str varchar2, bool boolean)
+  is
+  begin
+    dbms_output.put_line(num || str || case when bool then 'true' end);
+  end mixed_arguments;
 
 end callable_package;
 /

@@ -25,6 +25,7 @@ class CustomTable(Table):
     def __repr__(self):
         return "CustomTable({})".format(self.name)
 
+
 class TestRow:
 
     @classmethod
@@ -33,7 +34,7 @@ class TestRow:
 
     def test_row_errors(self):
         with pytest.raises(MultipleRowsError):
-            SmartRow(self.db.marks, {'student_no':STUDENT_NO})
+            SmartRow(self.db.marks, {'student_no': STUDENT_NO})
 
     def test_row_db(self):
         assert self.db == self.db.students[STUDENT_NO].db
@@ -66,7 +67,7 @@ class TestRow:
         ))[0].student_no.no == STUDENT_NO
 
     def test_row_decorators(self):
-        self.db.__lookup__.replace({ObjectType.TABLE : CustomTable})
+        self.db.__lookup__.replace({ObjectType.TABLE: CustomTable})
         self.db.cache.flush()
 
         student = self.db.students[STUDENT_NO]

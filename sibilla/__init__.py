@@ -1,16 +1,11 @@
-# from .db            import Database
-# from sibilla.object import OracleObject, ObjectType
-# from .__lookup__ import ObjectLookup, DatabaseObjectError
-# from .table         import Table, rowattr, rowmethod
-# from .view          import View
-# from .row           import Row, TableFieldError
-# from .package       import Package
-# from .function      import Function
-# from .procedure     import Procedure
+from abc import ABC, abstractmethod
+from typing import Any, Generator
 
 import cx_Oracle
 
-# ---- Module exceptions ----
+
+# ---- Module exceptions ------------------------------------------------------
+
 
 class SibillaError(Exception):
     """Base Sibilla exception."""
@@ -38,7 +33,8 @@ class CursorRowError(SibillaError):
     pass
 
 
-# ---- Local helpers ----
+# ---- Local helpers ----------------------------------------------------------
+
 
 def sql_identifier(name: str) -> str:
     if (
@@ -54,16 +50,84 @@ def sql_identifier(name: str) -> str:
     return name.upper()
 
 
-class CursorRow:
+class RowWrapper(ABC):
+    """Abstract wrapper class for cursor rows.
+
+    The results returned from a query are plain tuples and therefore lack some
+    information like, e.g., column names. A row wrapper allows to wrap the
+    results from a cursor or individual rows around a Python object that
+    carries extra information as required.
+    """
+
+    @staticmethod
+    @abstractmethod
+    def from_cursor(cursor) -> Generator[Any, None, None]:
+        """Convert the rows of a cursor into richer Python objects.
+
+        Subclasses must implement this method in order to instruct the
+        `fetch_all` method on how to wrap the result from the cursor.
+
+        Args:
+            cursor (cx_Oracle.Cursor): The cursor with the results ready to be
+                fetched.
+
+        Returns:
+            generator: the wrapped rows.
+        """
+        ...
+
+    @staticmethod
+    @abstractmethod
+    def from_list(cursor, data: list) -> list:
+        """Convert the elements in the data list into richer Python objects.
+
+        Subclasses must implement htis method in order to instruct the
+        `fetch_many` method on how to wrap the results in the data list.
+
+        Args:
+            cursor (cx_Oracle.Cursor): The cursor used to obtain the `data`.
+            data (list): The list of rows obtained from the given `cursor`.
+
+        Returns:
+            list: the wrapped rows.
+        """
+        ...
+
+
+class CursorRow(RowWrapper):
     """
     Turn a row of data into a dictionary/list-like object.
 
-    The constructor takes two lists of the same length as input parameters. The
-    first contains the key names (usually the column names) and the second the
-    values associated to each key.
+    This default implementation of the `RowWrapper` abstract base class allows
+    accessing row values both as attributes as well as tuple entries.
+
+    For example, if a query returns the tuple `(10, None, "Hello")` and the
+    corresponding columns are named `A`, `B` and `C`, by wrapping it with
+    `CursorRow` you get an object `row` that gives you the attributes `a`/`A`,
+    `b`/`B` and `c`/`C` for which `row.a = row[0]`, `row.B = row[1]` and
+    `row.c = row[2]`.
     """
 
-    def __init__(self, columns, row):
+    @staticmethod
+    def from_cursor(cursor):
+        columns = [c[0] for c in cursor.description]
+        for row in cursor:
+            yield CursorRow(cursor, row, columns)
+
+    @staticmethod
+    def from_list(cursor, data):
+        columns = [c[0] for c in cursor.description]
+        return [CursorRow(cursor, row, columns) for row in data]
+
+    def __init__(self, cursor, row, columns=None):
+        """CursorRow constructor.
+
+        For performance reasons, an optiona `columns` argument can be provided
+        so that the column names can be determined from the cursor only once
+        and reused for every element in the collection that is to be wrapped.
+        """
+        columns = columns or [c[0] for c in cursor.description]
+
         if type(columns) not in (list, tuple) \
                 or type(row) not in (list, tuple) \
                 or len(columns) != len(row):
@@ -76,11 +140,12 @@ class CursorRow:
         self._cols = columns
         self._state = dict(list(zip(columns, row)))
         self._max_col_len = None
+        self._values = row
 
     def __getattr__(self, name):
         return self.__dict__["_state"][sql_identifier(name)]
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: int):
         return self._state[self._cols[i]]
 
     def __repr__(self):
@@ -96,10 +161,12 @@ class CursorRow:
         return self._cols
 
     @property
-    def values(self):
-        return tuple([self._state[c] for c in self._cols])
+    def __raw__(self):
+        return self._values
+
 
 # -----------------------------------------------------------------------------
+
 
 from sibilla.object import ObjectLookup, ObjectType
 
@@ -193,6 +260,8 @@ class Database(cx_Oracle.Connection):
 
     __scope__ = Scope.ALL
 
+    __row_wrapper__ = CursorRow
+
     def __init__(self, *args, **kwargs):
         try:
             super().__init__(*args, **kwargs)
@@ -217,29 +286,7 @@ class Database(cx_Oracle.Connection):
     def __getattr__(self, name):
         return getattr(self.__lookup__, name, None)
 
-    # ---- PUBLIC METHODS ----
-
-    def to_cursor_row(self, cursor):
-        """
-        Return the fetch results from the provided cursor in the form of a
-        dictionary. Note that this method returns a generator.
-
-        Args:
-            cursor (cx_Oracle.Cursor): The cursor to fetch the data from. Data
-                should be available to be fetched, which means that, for
-                instance, a SQL statement must have been executed first before
-                passing the cursor to this method.
-
-        Returns:
-            generator: A generator that yields a dictionary containing the
-            column name : column value pairs.
-        """
-
-        columns = [c[0] for c in cursor.description]
-        for row in cursor:
-            yield CursorRow(columns, row)
-
-    def get_errors(self, name=None, type=None):
+    def get_errors(self, name: str=None, type: str=None) -> list:
         """
         Returns all the occurred errors in the form of CursorRow with the
         fields _name_, _type_, _line_, _position_, _error_ and _text_. The
@@ -286,10 +333,10 @@ class Database(cx_Oracle.Connection):
                 )
             )
 
-    def get_output(self):
+    def get_output(self) -> str:
         """Get the output from the standard output stream buffer."""
-        buf = self.var(cx_Oracle.STRING)
-        status = self.var(cx_Oracle.NUMBER)
+        buf = self.var('STRING')
+        status = self.var('NUMBER')
         text = ""
 
         while True:
@@ -302,32 +349,32 @@ class Database(cx_Oracle.Connection):
             text += "\n"
         return text
 
-    def fetch_one(self, stmt, *args, **kwargs):
-        """
-        Fetches only one row from the execution of the provided statement. Bind
-        variables can be provided both as positional and as keyword arguments
-        to this method.
+    def fetch_one(self, stmt: str, *args, **kwargs) -> Any:
+        """Fetches only one row from the execution of the provided statement.
+
+        Bind variables can be provided both as positional and as keyword
+        arguments to this method.
 
         Args:
             stmt (str): The statement to execute.
-
             *args: Variable length argument list for positional bind variables.
-
             **kwargs: Arbitrary keyword arguments for named bind variables.
 
         Returns:
-            tuple: A record as a result of the executed statement.
+            object: An instance of the `__row_rapper__` class if not `None`
+                or `tuple` otherwise.
         """
         cursor = self.plsql(stmt, *args, **kwargs)
         res = cursor.fetchone()
-        if res:
-            return CursorRow([c[0] for c in cursor.description], res)
 
-        return None
+        if not self.__row_wrapper__:
+            return res
 
-    def fetch_all(self, stmt, *args, **kwargs):
-        """
-        Fetch all rows from the execution of the provided statement.
+        return self.__row_wrapper__(cursor, res) if res else None
+
+
+    def fetch_all(self, stmt: str, *args, **kwargs) -> Generator[Any, None, None]:
+        """Fetch all rows from the execution of the provided statement.
 
         Bind variables can be provided both as positional and as keyword
         arguments to this method.
@@ -339,13 +386,23 @@ class Database(cx_Oracle.Connection):
 
         Returns:
             generator: A collection of all the records returned by the provided
-            statement.
+            statement, either wrapped in `__row_wrapper__` if not `None` or
+            as `tuple`s otherwise.
         """
-        return self.to_cursor_row(self.plsql(stmt, *args, **kwargs))
+        cursor = self.plsql(stmt, *args, **kwargs)
 
-    def fetch_many(self, stmt, n, *args, **kwargs):
-        """
-        Fetch many rows from the execution of the provided statement.
+        if not self.__row_wrapper__:
+            return cursor
+
+        return self.__row_wrapper__.from_cursor(cursor)
+
+    def _fetch_many(self, stmt: str, n: int, *args, **kwargs) -> tuple:
+        # Required to break cyclic dependencies leading to infinite recursion.
+        cursor = self.plsql(stmt, *args, **kwargs)
+        return cursor, cursor.fetchmany(n)
+
+    def fetch_many(self, stmt: str, n: int, *args, **kwargs) -> list:
+        """Fetch (at most) `n` rows from the given query.
 
         The number of raws returned as a list by this function is at most ``n``
         for each call made.
@@ -358,24 +415,33 @@ class Database(cx_Oracle.Connection):
 
         Returns:
             list: A list of at most n records returned by the provided
-            statement.
+            statement, either wrapped in `__row_wrapper__` if not `None` or
+            as `tuple`s otherwise.
         """
-        cursor = self.plsql(stmt, *args, **kwargs)
-        return [
-            CursorRow([c[0] for c in cursor.description], row)
-            for row in cursor.fetchmany(n)
-        ]
+        cursor, data = self._fetch_many(stmt, n, *args, **kwargs)
+
+        if not self.__row_wrapper__:
+            return data
+
+        return self.__row_wrapper__.from_list(cursor, data)
 
     # TODO: Batch execute: https://blogs.oracle.com/opal/efficient-and-scalable-batch-statement-execution-in-python-cx_oracle
-    def plsql(self, stmt, *args, batch=None, **kwargs):
-        """
-        Executes the provided (PL/)SQL code. Bind variables can be provided
-        both as positional and as keyword arguments to this method. Returns
-        a cursor in case data needs to be fetched out of it.
+    def plsql(self, stmt: str, *args, batch: list=None, **kwargs):
+        """Executes the provided (PL/)SQL code.
+
+        Bind variables can be provided both as positional and as keyword
+        arguments to this method. Returns a cursor in case data needs to be
+        fetched out of it.
+
+        If the provided statement is to be executed multiple times but with
+        different values, the `batch` argument should be used instead of
+        implementing a loop in Python in order to improve performance.
 
         Args:
             stmt (str): The (PL/)SQL statement to execute.
             *args: Variable length argument list for positional bind variables.
+            batch (list): A list of bind variables in the form of tuples to
+                use iteratively with the given (PL/)SQL statement.
             **kwargs: Arbitrary keyword arguments for named bind variables.
 
         Returns:
@@ -411,19 +477,29 @@ class Database(cx_Oracle.Connection):
     def set_scope(self, scope):
         self.__scope__ = scope
 
+    def set_row_wrapper(self, wrapper):
+        self.__row_wrapper__ = wrapper
+
     # TODO: This can use Function._Function__datatype_mapping to map python
     #       types to Oracle types.
     def var(self, var_type):
-        """
-        Creates and returns a variable of the given type from the cx_Oracle
-        package.
+        """Create a PL/SQL variable reference.
+
+        One can either pass the name of the variable type as defined in the
+        `cx_Oracle` package (e.g. `STRING`), or pass the type itself (e.g.
+        `cx_Oracle.STRING`).
 
         Args:
-            var_type: The type of the variable to create. This must be one of
-                the possible types provided by the cx_Oracle package.
+            var_type: The type of the variable to create.
+
+        Returns:
+            object: The requested variable reference.
         """
         cur = self.cursor()
-        return cur.var(var_type)
+        return cur.var(
+            getattr(cx_Oracle, var_type.upper()) if isinstance(var_type, str)
+            else var_type
+        )
 
     def commit(self, flush_cache=True):
         super().commit()
@@ -431,7 +507,7 @@ class Database(cx_Oracle.Connection):
         if flush_cache:
             self.cache.flush()
 
-    # ---- PROPERTIES ----
+    # ---- Properties ---------------------------------------------------------
 
     @property
     def session_user(self):

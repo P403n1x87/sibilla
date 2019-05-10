@@ -62,6 +62,10 @@ class TestCallable:
         with pytest.raises(CallableError):
             self.db.callable_package.func.print
 
+    def test_procedure_mixed_arguments(self):
+        self.db.callable_package.mixed_arguments(10, "hello", True)
+        assert self.db.get_output() == "10hellotrue\n"
+
     def test_function_return_type(self):
         assert self.db.is_positive.return_type == "BOOLEAN"
 

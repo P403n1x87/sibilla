@@ -23,7 +23,7 @@ class Function(Callable):
             package_query = "= :pkg_name"
             bind_variables["pkg_name"] = package.name
 
-        res = list(self.db.fetch_all("""
+        values = list(self.db.plsql("""
             select pls_type, data_type
             from   {}_arguments
             where  object_name   = :func_name
@@ -37,17 +37,15 @@ class Function(Callable):
             ("and owner= '"+self.__schema__+"'") if self.__schema__ else ""
         ), **bind_variables))
 
-        values = [e.values for e in res]
-
         if not values:
             raise CallableError(
                 "No such function: {}".format(self.callable_name)
             )
 
         elif len(set(values)) == 1:
-            ret_type = res[0].pls_type or res[0].data_type
+            ret_type = values[0][0] or values[0][1]
 
-            if "CURSOR" in ret_type or "CURSOR" in res[0].data_type:
+            if "CURSOR" in ret_type or "CURSOR" in values[0][1]:
                 self.__ret_type = "CURSOR"
             # elif "RECORD" in ret_type:
             #     # TODO: Return the function call as a string of PL/SQL code to
