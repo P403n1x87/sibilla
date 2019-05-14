@@ -11,12 +11,16 @@ setup(
     url='https://github.com/P403n1x87/sibilla',
 
     classifiers=[
-        'Development Status :: 5 - Stable',
+        'Development Status :: 4 - Beta',
 
         'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'Intended Audience :: Financial and Insurance Industry',
+
+        'Topic :: Database',
         'Topic :: Software Development',
 
-        'License :: GPL3',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
 
         'Programming Language :: Python :: 3.6',
     ],
