@@ -1,0 +1,9 @@
+language: python
+python: 3.6
+
+install:
+  - pip3 install .
+
+# FIXME: Install Oracle DB and run tests.
+script:
+  - true

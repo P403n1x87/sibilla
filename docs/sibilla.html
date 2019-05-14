@@ -1,0 +1,1149 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sibilla package &#8212; Sibilla Documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="sibilla-package">
+<h1><code class="docutils literal notranslate"><span class="pre">sibilla</span></code> package<a class="headerlink" href="#sibilla-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-contents">
+<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="database">
+<h3><code class="xref py py-class docutils literal notranslate"><span class="pre">Database</span></code><a class="headerlink" href="#database" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="sibilla.Database">
+<em class="property">class </em><code class="descclassname">sibilla.</code><code class="descname">Database</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.Database" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Database class.</p>
+<p>A subclass of the DB API specification-compliant cx_Oracle.Connection
+object, extended with additional features of Oracle Databases.</p>
+<p>Objects of this kind identify the database connection with the database
+itself. This is because the <a class="reference internal" href="#sibilla.Database" title="sibilla.Database"><code class="xref py py-class docutils literal notranslate"><span class="pre">Database</span></code></a> class offers the capability
+of accessing Oracle stored object in a Pythonic way. Typical examples are
+data access from tables and views, which would normally require the user to
+embed “alien” SQL queries in Python code. The same would be true if the
+user wishes to call a stored function or procedure. Traditionally, this
+would be done by writing a block of PL/SQL code or via the
+<code class="xref py py-func docutils literal notranslate"><span class="pre">cx_Oracle.Cursor.callfunc()</span></code> and <code class="xref py py-func docutils literal notranslate"><span class="pre">cx_Oracle.Cursor.callproc()</span></code>
+methods. Sibilla allows you to call them as if they were plain Python
+methods of any <a class="reference internal" href="#sibilla.Database" title="sibilla.Database"><code class="xref py py-class docutils literal notranslate"><span class="pre">Database</span></code></a> instance.</p>
+<p class="rubric">Example</p>
+<p>To create an Database instance, import <a class="reference internal" href="#sibilla.Database" title="sibilla.Database"><code class="xref py py-class docutils literal notranslate"><span class="pre">Database</span></code></a> from
+<code class="docutils literal notranslate"><span class="pre">sibilla</span></code> and pass <code class="docutils literal notranslate"><span class="pre">username</span></code>, <code class="docutils literal notranslate"><span class="pre">password</span></code> and <code class="docutils literal notranslate"><span class="pre">dsn</span></code> to it (plus
+any other optional argument accepted by the constructor of
+<code class="xref py py-class docutils literal notranslate"><span class="pre">cx_Oracle.Connection</span></code>):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sibilla</span> <span class="k">import</span> <span class="n">Database</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">Database</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">dsn</span><span class="o">=</span><span class="n">TNS</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <a class="reference internal" href="#sibilla.Database" title="sibilla.Database"><code class="xref py py-class docutils literal notranslate"><span class="pre">Database</span></code></a> class offers a built-in look-up for Oracle objects,
+like Tables, Views, Functions, Procedures and Packages.</p>
+<p class="rubric">Example</p>
+<p>To create a reference to a table called <code class="docutils literal notranslate"><span class="pre">COUNTRY</span></code> in the Oracle
+database, access the attribute <code class="docutils literal notranslate"><span class="pre">country</span></code> from the <code class="docutils literal notranslate"><span class="pre">Database</span></code>
+instance:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">country</span>
+<span class="go">&lt;table &#39;COUNTRY&#39;&gt;</span>
+</pre></div>
+</div>
+<p>A table is a special instance of a <a class="reference internal" href="#sibilla.dataset.DataSet" title="sibilla.dataset.DataSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.dataset.DataSet</span></code></a> object,
+which allows you to perform basic SQL queries in a Pythonic way, without
+writing a single line of SQL code. See the sections on
+<code class="xref py py-class docutils literal notranslate"><span class="pre">siblla.dataset.DataSet</span></code> and <a class="reference internal" href="#sibilla.table.Table" title="sibilla.table.Table"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.table.Table</span></code></a> for more
+details.</p>
+<p>In a similar way one can access stored <cite>functions</cite>, <cite>procedures</cite> and
+<cite>packages</cite>. For functions and procedures stored in a package, the code will
+try to figure out whether the sought object is a function or a procedure.
+When there are overloaded objects that cannot be resolved, one can
+explicitly call a procedure or a function by accessing the <code class="docutils literal notranslate"><span class="pre">proc</span></code> and
+<code class="docutils literal notranslate"><span class="pre">func</span></code> attributes of a <a class="reference internal" href="#sibilla.package.Package" title="sibilla.package.Package"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.package.Package</span></code></a> instance.</p>
+<p class="rubric">Example</p>
+<p>Assume that the database has a stored package called <code class="docutils literal notranslate"><span class="pre">foo</span></code> containing
+(overloaded) procedures and functions named <code class="docutils literal notranslate"><span class="pre">bar</span></code>. To get
+<code class="docutils literal notranslate"><span class="pre">foo.bar</span></code> as a procedure one has to use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">foo</span><span class="o">.</span><span class="n">proc</span><span class="o">.</span><span class="n">bar</span>
+<span class="go">&lt;procedure &#39;BAR&#39; from &lt;package &#39;FOO&#39;&gt;&gt;</span>
+</pre></div>
+</div>
+<p>Similarly, to get bar as a function,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">foo</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">bar</span>
+<span class="go">&lt;function &#39;BAR&#39; from &lt;package &#39;FOO&#39;&gt;&gt;</span>
+</pre></div>
+</div>
+<p>When there are no ambiguities like in the previous case (e.g. there are
+only functions or only procedures named <code class="docutils literal notranslate"><span class="pre">bar</span></code>), one can simply use</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">foo</span><span class="o">.</span><span class="n">bar</span>
+</pre></div>
+</div>
+<p>One can then call stored functions and procedures as normal Python
+functions/methods, using both positional and keyword arguments.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">foo</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="go">&#39;The answer is 42. So long and thanks for all the fish!&#39;</span>
+</pre></div>
+</div>
+<dl class="class">
+<dt id="sibilla.Database.Scope">
+<em class="property">class </em><code class="descname">Scope</code><a class="headerlink" href="#sibilla.Database.Scope" title="Permalink to this definition">¶</a></dt>
+<dd><p>Oracle Data Dictionary scopes.</p>
+<p>This type is used to specify which scope the database look-up must use
+when looking up stored objects. Choose between <code class="docutils literal notranslate"><span class="pre">ALL</span></code>, <code class="docutils literal notranslate"><span class="pre">DBA</span></code> and
+<code class="docutils literal notranslate"><span class="pre">USER</span></code>. For more details on the meaning of these scopes, please refer
+to the Oracle documentation.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">ALL</span></code> scope is set by default. However, if you do not make use
+of many objects from different schema other than the current one,
+consider using the <code class="docutils literal notranslate"><span class="pre">USER</span></code> scope instead. This will make object
+look-ups faster as the search is restricted to a smaller view.</p>
+<dl class="attribute">
+<dt id="sibilla.Database.Scope.ALL">
+<code class="descname">ALL</code><em class="property"> = 'all'</em><a class="headerlink" href="#sibilla.Database.Scope.ALL" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sibilla.Database.Scope.DBA">
+<code class="descname">DBA</code><em class="property"> = 'dba'</em><a class="headerlink" href="#sibilla.Database.Scope.DBA" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sibilla.Database.Scope.USER">
+<code class="descname">USER</code><em class="property"> = 'user'</em><a class="headerlink" href="#sibilla.Database.Scope.USER" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.Database.commit">
+<code class="descname">commit</code><span class="sig-paren">(</span><em>flush_cache=True</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.Database.commit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sibilla.Database.fetch_all">
+<code class="descname">fetch_all</code><span class="sig-paren">(</span><em>stmt: str</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span> &#x2192; Generator[[Any, NoneType], NoneType]<a class="headerlink" href="#sibilla.Database.fetch_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch all rows from the execution of the provided statement.</p>
+<p>Bind variables can be provided both as positional and as keyword
+arguments to this method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>stmt</strong> (<em>str</em>) – The statement to execute.</li>
+<li><strong>*args</strong> – Variable length argument list for positional bind variables.</li>
+<li><strong>**kwargs</strong> – Arbitrary keyword arguments for named bind variables.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><dl class="docutils">
+<dt>A collection of all the records returned by the</dt>
+<dd><p class="first last">provided statement, either wrapped in <code class="docutils literal notranslate"><span class="pre">__row_wrapper__</span></code> if
+not <code class="docutils literal notranslate"><span class="pre">None</span></code> or as <code class="docutils literal notranslate"><span class="pre">tuple</span></code> s otherwise.</p>
+</dd>
+</dl>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><cite>generator</cite></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.Database.fetch_many">
+<code class="descname">fetch_many</code><span class="sig-paren">(</span><em>stmt: str</em>, <em>n: int</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span> &#x2192; list<a class="headerlink" href="#sibilla.Database.fetch_many" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch (at most) <cite>n</cite> rows from the given query.</p>
+<p>The number of raws returned as a list by this function is at most <code class="docutils literal notranslate"><span class="pre">n</span></code>
+for each call made.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>stmt</strong> (<em>str</em>) – The statement to execute.</li>
+<li><strong>n</strong> (<em>int</em>) – The number of rows to fetch.</li>
+<li><strong>*args</strong> – Variable length argument list for positional bind variables.</li>
+<li><strong>**kwargs</strong> – Arbitrary keyword arguments for named bind variables.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A list of at most n records returned by the provided
+statement, either wrapped in <code class="docutils literal notranslate"><span class="pre">__row_wrapper__</span></code> if not <code class="docutils literal notranslate"><span class="pre">None</span></code> or
+as <code class="docutils literal notranslate"><span class="pre">tuple</span></code> s otherwise.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><cite>list</cite></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.Database.fetch_one">
+<code class="descname">fetch_one</code><span class="sig-paren">(</span><em>stmt: str</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span> &#x2192; Any<a class="headerlink" href="#sibilla.Database.fetch_one" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch a single row from the execution of the provided statement.</p>
+<p>Bind variables can be provided both as positional and as keyword
+arguments to this method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>stmt</strong> (<em>str</em>) – The statement to execute.</li>
+<li><strong>*args</strong> – Variable length argument list for positional bind variables.</li>
+<li><strong>**kwargs</strong> – Arbitrary keyword arguments for named bind variables.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><dl class="docutils">
+<dt>An instance of the <code class="docutils literal notranslate"><span class="pre">__row_rapper__</span></code> class if not</dt>
+<dd><p class="first last"><code class="docutils literal notranslate"><span class="pre">None</span></code> or <cite>tuple</cite> otherwise.</p>
+</dd>
+</dl>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><cite>object</cite></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.Database.get_errors">
+<code class="descname">get_errors</code><span class="sig-paren">(</span><em>name: str = None</em>, <em>type: str = None</em><span class="sig-paren">)</span> &#x2192; list<a class="headerlink" href="#sibilla.Database.get_errors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Oracle errors.</p>
+<p>Retrieves all the current errors for the logged user. Internally, this
+method performs a query on the inner join between <code class="docutils literal notranslate"><span class="pre">USER_ERRORS</span></code> and
+<code class="docutils literal notranslate"><span class="pre">USER_SOURCES</span></code>. The result is a collection of records with the fields
+<code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">type</span></code>, <code class="docutils literal notranslate"><span class="pre">line</span></code>, <code class="docutils literal notranslate"><span class="pre">position</span></code>, <code class="docutils literal notranslate"><span class="pre">error</span></code> and <code class="docutils literal notranslate"><span class="pre">text</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>str</em>) – Filter errors by object name. A pattern can be used
+(case sensitive)</li>
+<li><strong>type</strong> (<em>str</em>) – Filter errors by object type. A pattern can be used
+(case insensitive)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><dl class="docutils">
+<dt>a list of CursorRow objects describing all the requested</dt>
+<dd><p class="first last">error messages.</p>
+</dd>
+</dl>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><cite>list</cite></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.Database.get_output">
+<code class="descname">get_output</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; str<a class="headerlink" href="#sibilla.Database.get_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the output from the standard output stream buffer.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.Database.plsql">
+<code class="descname">plsql</code><span class="sig-paren">(</span><em>stmt: str</em>, <em>*args</em>, <em>batch: list = None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.Database.plsql" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute (PL/)SQL code.</p>
+<p>Bind variables can be provided both as positional and as keyword
+arguments to this method. Returns a cursor in case data needs to be
+fetched out of it.</p>
+<p>If the provided statement is to be executed multiple times but with
+different values, the <code class="docutils literal notranslate"><span class="pre">batch</span></code> argument should be used instead of
+implementing a loop in Python in order to improve performance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>stmt</strong> (<em>str</em>) – The (PL/)SQL statement to execute.</li>
+<li><strong>*args</strong> – Variable length argument list for positional bind variables.</li>
+<li><strong>batch</strong> (<em>list</em>) – A list of bind variables in the form of tuples to
+use iteratively with the given (PL/)SQL statement.</li>
+<li><strong>**kwargs</strong> – Arbitrary keyword arguments for named bind variables.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><dl class="docutils">
+<dt>the cursor associated with the code</dt>
+<dd><p class="first last">execution.</p>
+</dd>
+</dl>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><code class="xref py py-class docutils literal notranslate"><span class="pre">cx_Oracle.Cursor</span></code></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="sibilla.Database.session_user">
+<code class="descname">session_user</code><a class="headerlink" href="#sibilla.Database.session_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the session user for the connection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.Database.set_row_wrapper">
+<code class="descname">set_row_wrapper</code><span class="sig-paren">(</span><em>wrapper</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.Database.set_row_wrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the row wrapper class.</p>
+<p>This class is used to wrap the raw rows returned by a SQL query around
+richer Python objects. See <a class="reference internal" href="#sibilla.RowWrapper" title="sibilla.RowWrapper"><code class="xref py py-class docutils literal notranslate"><span class="pre">RowWrapper</span></code></a> for more details.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.Database.set_scope">
+<code class="descname">set_scope</code><span class="sig-paren">(</span><em>scope</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.Database.set_scope" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the Oracle Data Dictionary scope.</p>
+<p>Use one of the <code class="docutils literal notranslate"><span class="pre">Database.Scope</span></code> attributes. By default, a
+<code class="docutils literal notranslate"><span class="pre">Database</span></code> instance is created with the <code class="docutils literal notranslate"><span class="pre">Database.Scope.ALL</span></code> scope.
+For applications that rely mostly or exclusively on the logged user
+schema, it is recommended that the scope be set to
+<code class="docutils literal notranslate"><span class="pre">Database.Scope.USER</span></code> for better performance.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.Database.var">
+<code class="descname">var</code><span class="sig-paren">(</span><em>var_type</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.Database.var" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a PL/SQL variable reference.</p>
+<p>One can either pass the name of the variable type as defined in the
+<code class="docutils literal notranslate"><span class="pre">cx_Oracle</span></code> package (e.g. <cite>STRING</cite>), or pass the type itself (e.g.
+<code class="docutils literal notranslate"><span class="pre">cx_Oracle.STRING</span></code>).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>var_type</strong> – The type of the variable to create.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The requested variable reference.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><cite>object</cite></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.RowWrapper">
+<em class="property">class </em><code class="descclassname">sibilla.</code><code class="descname">RowWrapper</code><a class="headerlink" href="#sibilla.RowWrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract wrapper class for cursor rows.</p>
+<p>The results returned from a query are plain tuples and therefore lack some
+information like, e.g., column names. A row wrapper allows to wrap the
+results from a cursor or individual rows around a Python object that
+carries extra information as required.</p>
+<dl class="staticmethod">
+<dt id="sibilla.RowWrapper.from_cursor">
+<em class="property">static </em><code class="descname">from_cursor</code><span class="sig-paren">(</span><em>cursor</em><span class="sig-paren">)</span> &#x2192; Generator[[Any, NoneType], NoneType]<a class="headerlink" href="#sibilla.RowWrapper.from_cursor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the rows of a cursor into richer Python objects.</p>
+<p>Subclasses must implement this method in order to instruct the
+<a class="reference internal" href="#sibilla.Database.fetch_all" title="sibilla.Database.fetch_all"><code class="xref py py-func docutils literal notranslate"><span class="pre">Database.fetch_all()</span></code></a> method on how to wrap the result from the
+cursor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cursor</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">cx_Oracle.Cursor</span></code>) – The cursor with the results
+ready to be fetched.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the wrapped rows.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">generator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="sibilla.RowWrapper.from_list">
+<em class="property">static </em><code class="descname">from_list</code><span class="sig-paren">(</span><em>cursor</em>, <em>data: list</em><span class="sig-paren">)</span> &#x2192; list<a class="headerlink" href="#sibilla.RowWrapper.from_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the elements in the data list into richer Python objects.</p>
+<p>Subclasses must implement htis method in order to instruct the
+<cite>fetch_many</cite> method on how to wrap the results in the data list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>cursor</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">cx_Oracle.Cursor</span></code>) – The cursor used to obtain the
+<cite>data</cite>.</li>
+<li><strong>data</strong> (<code class="docutils literal notranslate"><span class="pre">list</span></code>) – The list of rows obtained from the given <cite>cursor</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">the wrapped rows.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><code class="docutils literal notranslate"><span class="pre">list</span></code></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.CursorRow">
+<em class="property">class </em><code class="descclassname">sibilla.</code><code class="descname">CursorRow</code><span class="sig-paren">(</span><em>cursor</em>, <em>row</em>, <em>columns=None</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.CursorRow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Turn a row of data into a dictionary/list-like object.</p>
+<p>This default implementation of the <a class="reference internal" href="#sibilla.RowWrapper" title="sibilla.RowWrapper"><code class="xref py py-class docutils literal notranslate"><span class="pre">RowWrapper</span></code></a> abstract base class
+allows accessing row values both as attributes as well as tuple entries.</p>
+<p>For example, if a query returns the tuple <code class="docutils literal notranslate"><span class="pre">(10,</span> <span class="pre">None,</span> <span class="pre">&quot;Hello&quot;)</span></code> and the
+corresponding columns are named <code class="docutils literal notranslate"><span class="pre">A</span></code>, <code class="docutils literal notranslate"><span class="pre">B</span></code> and <code class="docutils literal notranslate"><span class="pre">C</span></code>, by wrapping it with
+<a class="reference internal" href="#sibilla.CursorRow" title="sibilla.CursorRow"><code class="xref py py-class docutils literal notranslate"><span class="pre">CursorRow</span></code></a> you get an object <code class="docutils literal notranslate"><span class="pre">row</span></code> that gives you the attributes
+<code class="docutils literal notranslate"><span class="pre">a</span></code>/<code class="docutils literal notranslate"><span class="pre">A</span></code>, <code class="docutils literal notranslate"><span class="pre">b</span></code>/<code class="docutils literal notranslate"><span class="pre">B</span></code> and <code class="docutils literal notranslate"><span class="pre">c</span></code>/<code class="docutils literal notranslate"><span class="pre">C</span></code> for which <code class="docutils literal notranslate"><span class="pre">row.a</span> <span class="pre">=</span> <span class="pre">row[0]</span></code>,
+<code class="docutils literal notranslate"><span class="pre">row.B</span> <span class="pre">=</span> <span class="pre">row[1]</span></code> and <code class="docutils literal notranslate"><span class="pre">row.c</span> <span class="pre">=</span> <span class="pre">row[2]</span></code>.</p>
+<dl class="staticmethod">
+<dt id="sibilla.CursorRow.from_cursor">
+<em class="property">static </em><code class="descname">from_cursor</code><span class="sig-paren">(</span><em>cursor</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.CursorRow.from_cursor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the rows of a cursor into richer Python objects.</p>
+<p>Subclasses must implement this method in order to instruct the
+<a class="reference internal" href="#sibilla.Database.fetch_all" title="sibilla.Database.fetch_all"><code class="xref py py-func docutils literal notranslate"><span class="pre">Database.fetch_all()</span></code></a> method on how to wrap the result from the
+cursor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cursor</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">cx_Oracle.Cursor</span></code>) – The cursor with the results
+ready to be fetched.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the wrapped rows.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">generator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="sibilla.CursorRow.from_list">
+<em class="property">static </em><code class="descname">from_list</code><span class="sig-paren">(</span><em>cursor</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.CursorRow.from_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the elements in the data list into richer Python objects.</p>
+<p>Subclasses must implement htis method in order to instruct the
+<cite>fetch_many</cite> method on how to wrap the results in the data list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>cursor</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">cx_Oracle.Cursor</span></code>) – The cursor used to obtain the
+<cite>data</cite>.</li>
+<li><strong>data</strong> (<code class="docutils literal notranslate"><span class="pre">list</span></code>) – The list of rows obtained from the given <cite>cursor</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">the wrapped rows.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><code class="docutils literal notranslate"><span class="pre">list</span></code></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-sibilla.caching">
+<span id="sibilla-caching-module"></span><h3>sibilla.caching module<a class="headerlink" href="#module-sibilla.caching" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="sibilla.caching.Cached">
+<em class="property">class </em><code class="descclassname">sibilla.caching.</code><code class="descname">Cached</code><span class="sig-paren">(</span><em>cache=None</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.caching.Cached" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Cache mixin for adding synchronised TTL caching support to objects.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.caching.SynchronizedTTLCache">
+<em class="property">class </em><code class="descclassname">sibilla.caching.</code><code class="descname">SynchronizedTTLCache</code><a class="headerlink" href="#sibilla.caching.SynchronizedTTLCache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">cachetools.ttl.TTLCache</span></code></p>
+<p>Implement a synchronised TTL cache.</p>
+<dl class="method">
+<dt id="sibilla.caching.SynchronizedTTLCache.flush">
+<code class="descname">flush</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.caching.SynchronizedTTLCache.flush" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flush the cache.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="sibilla.caching.cachedmethod">
+<code class="descclassname">sibilla.caching.</code><code class="descname">cachedmethod</code><span class="sig-paren">(</span><em>f</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.caching.cachedmethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Caching decorator for class and instance methods.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sibilla.caching.set_maxsize">
+<code class="descclassname">sibilla.caching.</code><code class="descname">set_maxsize</code><span class="sig-paren">(</span><em>size</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.caching.set_maxsize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the maximum cache size when creating Cached objects.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sibilla.caching.set_ttl">
+<code class="descclassname">sibilla.caching.</code><code class="descname">set_ttl</code><span class="sig-paren">(</span><em>ttl</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.caching.set_ttl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the TTL value to use when creating Cached objects.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-sibilla.callable">
+<span id="sibilla-callable-module"></span><h3>sibilla.callable module<a class="headerlink" href="#module-sibilla.callable" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="sibilla.callable.Callable">
+<em class="property">class </em><code class="descclassname">sibilla.callable.</code><code class="descname">Callable</code><span class="sig-paren">(</span><em>db</em>, <em>name</em>, <em>type</em>, <em>schema</em>, <em>package=None</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.callable.Callable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.object.OracleObject" title="sibilla.object.OracleObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.object.OracleObject</span></code></a></p>
+<p>Base class for Procedures and Functions.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.callable.CallableError">
+<em class="property">exception </em><code class="descclassname">sibilla.callable.</code><code class="descname">CallableError</code><a class="headerlink" href="#sibilla.callable.CallableError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.DatabaseError</span></code></p>
+<p>Database stored callable error.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.callable.CallableFactory">
+<em class="property">class </em><code class="descclassname">sibilla.callable.</code><code class="descname">CallableFactory</code><span class="sig-paren">(</span><em>callable_class</em>, <em>schema</em>, <em>package=None</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.callable.CallableFactory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.caching.Cached" title="sibilla.caching.Cached"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.caching.Cached</span></code></a></p>
+<p>Create a Python callable for a database stored callable.</p>
+<p>This class should be considered as private as it is used internally to
+allow calling an object as a function or a procedure explicitly.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-sibilla.dataset">
+<span id="sibilla-dataset-module"></span><h3>sibilla.dataset module<a class="headerlink" href="#module-sibilla.dataset" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="sibilla.dataset.DataSet">
+<em class="property">class </em><code class="descclassname">sibilla.dataset.</code><code class="descname">DataSet</code><a class="headerlink" href="#sibilla.dataset.DataSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="sibilla.dataset.DataSet.describe">
+<code class="descname">describe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.dataset.DataSet.describe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Describe the table columns.</p>
+<p>The return value is the same as the <code class="docutils literal notranslate"><span class="pre">description</span></code> attribute of a
+Cursor object from the <code class="docutils literal notranslate"><span class="pre">cx_Oracle</span></code> module.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.dataset.DataSet.fetch_all">
+<code class="descname">fetch_all</code><span class="sig-paren">(</span><em>select='*'</em>, <em>where=None</em>, <em>order_by=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.dataset.DataSet.fetch_all" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sibilla.dataset.DataSet.fetch_many">
+<code class="descname">fetch_many</code><span class="sig-paren">(</span><em>n</em>, <em>select='*'</em>, <em>where=None</em>, <em>order_by=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.dataset.DataSet.fetch_many" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sibilla.dataset.DataSet.fetch_one">
+<code class="descname">fetch_one</code><span class="sig-paren">(</span><em>select='*'</em>, <em>where=None</em>, <em>order_by=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.dataset.DataSet.fetch_one" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="sibilla.dataset.DataSet.set_row_class">
+<em class="property">classmethod </em><code class="descname">set_row_class</code><span class="sig-paren">(</span><em>row_class</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.dataset.DataSet.set_row_class" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.dataset.MultipleRowsError">
+<em class="property">exception </em><code class="descclassname">sibilla.dataset.</code><code class="descname">MultipleRowsError</code><a class="headerlink" href="#sibilla.dataset.MultipleRowsError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.dataset.RowError" title="sibilla.dataset.RowError"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.dataset.RowError</span></code></a></p>
+<p>Multiple rows returned when only one expected.</p>
+<p>Usually a consequence of a primary key defined on the table class that
+is not part of the actual table schema and that is violated by the
+retrieved data.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.dataset.NoSuchRowError">
+<em class="property">exception </em><code class="descclassname">sibilla.dataset.</code><code class="descname">NoSuchRowError</code><a class="headerlink" href="#sibilla.dataset.NoSuchRowError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.dataset.RowError" title="sibilla.dataset.RowError"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.dataset.RowError</span></code></a></p>
+<p>Raised when no row matches the given conditions.</p>
+<p>Similar to Oracle’s``NO_DATA_FOUND``</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.dataset.QueryError">
+<em class="property">exception </em><code class="descclassname">sibilla.dataset.</code><code class="descname">QueryError</code><a class="headerlink" href="#sibilla.dataset.QueryError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.DatabaseError</span></code></p>
+<p>Database query error.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.dataset.Row">
+<em class="property">class </em><code class="descclassname">sibilla.dataset.</code><code class="descname">Row</code><span class="sig-paren">(</span><em>dataset</em>, <em>kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.dataset.Row" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.caching.Cached" title="sibilla.caching.Cached"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.caching.Cached</span></code></a></p>
+<dl class="attribute">
+<dt id="sibilla.dataset.Row.db">
+<code class="descname">db</code><a class="headerlink" href="#sibilla.dataset.Row.db" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the underlying database.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.dataset.Row.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>name</em>, <em>default=None</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.dataset.Row.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute getter hook.</p>
+<p>This method provides a convenient customisation interface for
+subclasses of <a class="reference internal" href="#sibilla.dataset.Row" title="sibilla.dataset.Row"><code class="xref py py-class docutils literal notranslate"><span class="pre">Row</span></code></a>. Implement it to define custom behaviour
+when retrieving row attributes.</p>
+<p>When the requested attribute cannot be determined, this method should
+raise the <a class="reference internal" href="#sibilla.dataset.RowGetterError" title="sibilla.dataset.RowGetterError"><code class="xref py py-class docutils literal notranslate"><span class="pre">RowGetterError</span></code></a> exception.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.dataset.RowAttributeError">
+<em class="property">exception </em><code class="descclassname">sibilla.dataset.</code><code class="descname">RowAttributeError</code><a class="headerlink" href="#sibilla.dataset.RowAttributeError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.dataset.RowError" title="sibilla.dataset.RowError"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.dataset.RowError</span></code></a></p>
+<p>Row attribute access error.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.dataset.RowError">
+<em class="property">exception </em><code class="descclassname">sibilla.dataset.</code><code class="descname">RowError</code><a class="headerlink" href="#sibilla.dataset.RowError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.DatabaseError</span></code></p>
+<p>Dataset row error.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.dataset.RowGetterError">
+<em class="property">exception </em><code class="descclassname">sibilla.dataset.</code><code class="descname">RowGetterError</code><a class="headerlink" href="#sibilla.dataset.RowGetterError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Row getter method error.</p>
+<p>Raised when the requested attribute on the row cannot be determined.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sibilla.dataset.rowattribute">
+<code class="descclassname">sibilla.dataset.</code><code class="descname">rowattribute</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.dataset.rowattribute" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sibilla.dataset.rowmethod">
+<code class="descclassname">sibilla.dataset.</code><code class="descname">rowmethod</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.dataset.rowmethod" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-sibilla.datatypes">
+<span id="sibilla-datatypes-module"></span><h3>sibilla.datatypes module<a class="headerlink" href="#module-sibilla.datatypes" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="sibilla.datatypes.Record">
+<em class="property">class </em><code class="descclassname">sibilla.datatypes.</code><code class="descname">Record</code><a class="headerlink" href="#sibilla.datatypes.Record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-sibilla.function">
+<span id="sibilla-function-module"></span><h3>sibilla.function module<a class="headerlink" href="#module-sibilla.function" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="sibilla.function.Function">
+<em class="property">class </em><code class="descclassname">sibilla.function.</code><code class="descname">Function</code><span class="sig-paren">(</span><em>db</em>, <em>name</em>, <em>schema</em>, <em>package=None</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.function.Function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.callable.Callable" title="sibilla.callable.Callable"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.callable.Callable</span></code></a></p>
+<dl class="attribute">
+<dt id="sibilla.function.Function.return_type">
+<code class="descname">return_type</code><a class="headerlink" href="#sibilla.function.Function.return_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-sibilla.object">
+<span id="sibilla-object-module"></span><h3>sibilla.object module<a class="headerlink" href="#module-sibilla.object" title="Permalink to this headline">¶</a></h3>
+<dl class="exception">
+<dt id="sibilla.object.ObjectError">
+<em class="property">exception </em><code class="descclassname">sibilla.object.</code><code class="descname">ObjectError</code><a class="headerlink" href="#sibilla.object.ObjectError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.DatabaseError</span></code></p>
+<p>Defines an error specific to object lookup within the Oracle database
+associated to an Database object.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.object.ObjectLookup">
+<em class="property">class </em><code class="descclassname">sibilla.object.</code><code class="descname">ObjectLookup</code><span class="sig-paren">(</span><em>db</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.object.ObjectLookup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.caching.Cached" title="sibilla.caching.Cached"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.caching.Cached</span></code></a></p>
+<p>This class allows to customize the way objects (e.g. tables, views,
+packages, …) are looked up from the Oracle database when accessed as
+attributes of an instance of this class.</p>
+<p>Every instance of Database comes with a default ObjectLookup instance
+accessible through the read-only property <code class="docutils literal notranslate"><span class="pre">__lookup__</span></code>. This can be
+used to specify the custom classes to handle general Oracle object, as well
+as specific items, like individual tables, packages, etc…</p>
+<p class="rubric">Example</p>
+<p>Assume that the database we are connected to has families of tables
+with a certain prefix, say <code class="docutils literal notranslate"><span class="pre">DATA_</span></code>, that can be, in practice, treated
+as a namespace. One might want to be able to access such tables (e.g.
+the <code class="docutils literal notranslate"><span class="pre">DATA_CUSTOMER</span></code> table) with an attribute access on a Database
+object as</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sibilla</span> <span class="k">import</span> <span class="n">Database</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">Database</span><span class="p">(</span><span class="s2">&quot;username&quot;</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">,</span> <span class="s2">&quot;dsn&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">customer</span>
+</pre></div>
+</div>
+<p>This can be achieved in the following ways. First of all one subclasses
+<code class="docutils literal notranslate"><span class="pre">ObjectLookup</span></code> to create a custom lookup with an override of the
+<code class="docutils literal notranslate"><span class="pre">renaming</span></code> method</p>
+<blockquote>
+<div><p>from sibilla import ObjectLookup</p>
+<p>class DataLookup(ObjectLookup):</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>def renaming(self, name):</dt>
+<dd>return “<a href="#id1"><span class="problematic" id="id2">data_</span></a>” + name</dd>
+</dl>
+</div></blockquote>
+</div></blockquote>
+<p>The one either assigns a new instance of <code class="docutils literal notranslate"><span class="pre">DataLookup</span></code> to <code class="docutils literal notranslate"><span class="pre">db.data</span></code>,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">DataLookup</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>or one subclasses Database and initializes <code class="docutils literal notranslate"><span class="pre">data</span></code> as an object
+attribute:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">MyDB</span><span class="p">(</span><span class="n">Database</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="nb">super</span><span class="p">(</span><span class="n">MyDB</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">DataLookup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">MyDB</span><span class="p">(</span><span class="s2">&quot;username&quot;</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">,</span> <span class="s2">&quot;dsn&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Thus, <code class="docutils literal notranslate"><span class="pre">db.data.customer</span></code> becomes equivalent to <code class="docutils literal notranslate"><span class="pre">db.data_customer</span></code>.</p>
+<p>By default, the lookup will create an object of type <code class="docutils literal notranslate"><span class="pre">Table</span></code> from
+<code class="docutils literal notranslate"><span class="pre">sibilla</span></code> for the table accessed as <code class="docutils literal notranslate"><span class="pre">db.data_customer</span></code>. To override
+this, one can subclass <code class="docutils literal notranslate"><span class="pre">Table</span></code> and pass the class to the <code class="docutils literal notranslate"><span class="pre">replace</span></code>
+method as dictionary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sibilla</span> <span class="k">import</span> <span class="n">ObjectType</span><span class="p">,</span> <span class="n">Table</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">MyTable</span><span class="p">(</span><span class="n">Table</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">pass</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">__lookup__</span><span class="o">.</span><span class="n">replace</span><span class="p">({</span><span class="n">ObjectType</span><span class="o">.</span><span class="n">TABLE</span> <span class="p">:</span> <span class="n">MyTable</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>Custom table classes can also be assigned to general attributes of an
+Database object by passing the attribute name as key in the dictionary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">__lookup__</span><span class="o">.</span><span class="n">replace</span><span class="p">({</span><span class="s2">&quot;customer&quot;</span> <span class="p">:</span> <span class="n">MyTable</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>This way, the custom table class <code class="docutils literal notranslate"><span class="pre">MyTable</span></code> is used only when
+accessing the attribite <code class="docutils literal notranslate"><span class="pre">customer</span></code> from <code class="docutils literal notranslate"><span class="pre">db</span></code> rather than for every
+table. Observe that this is NOT the same as assigning <code class="docutils literal notranslate"><span class="pre">MyTable</span></code>
+directly to the attribute <code class="docutils literal notranslate"><span class="pre">customer</span></code> of <code class="docutils literal notranslate"><span class="pre">db</span></code>.</p>
+<dl class="method">
+<dt id="sibilla.object.ObjectLookup.get_class">
+<code class="descname">get_class</code><span class="sig-paren">(</span><em>type_name</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.object.ObjectLookup.get_class" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the class associated with the given type or attribute.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>type_name</strong> (<em>str</em>) – The type name to whose associated class is to be
+retrieved. This is meant to be either one of the values exposed
+by the <code class="docutils literal notranslate"><span class="pre">ObjectType</span></code> class, or a custom attribute.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The class associated with the given type/attribute.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">class</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.object.ObjectLookup.renaming">
+<code class="descname">renaming</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.object.ObjectLookup.renaming" title="Permalink to this definition">¶</a></dt>
+<dd><p>This methods offers an interface to easy customization of subclasses.
+Any attribute accessed on an ObjectLookup object is preprocessed by
+this method. This can be useful when database objects have characters
+which are not allowed in Python to appear in identifiers. For example,
+<code class="docutils literal notranslate"><span class="pre">my_package#</span></code> is a valid Oracle package name, however
+<code class="docutils literal notranslate"><span class="pre">db.my_package#</span></code> does not produce the desired result in Python. To
+overcome this situation one can subclass ObjectLookup with an
+overridden method <code class="docutils literal notranslate"><span class="pre">name</span></code> that does a suitable conversion.</p>
+<p class="rubric">Example</p>
+<p>To access the Oracle package <code class="docutils literal notranslate"><span class="pre">my_package#</span></code> from Python, one could
+use the convention of replacing any occurrence of # with __.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sibilla</span> <span class="k">import</span> <span class="n">ObjectLookup</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">MyLookup</span><span class="p">(</span><span class="n">ObjectLookup</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">def</span> <span class="nf">renaming</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="k">return</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">,</span> <span class="s1">&#39;#&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Any access to the attribute <code class="docutils literal notranslate"><span class="pre">my_package__</span></code> from a <code class="docutils literal notranslate"><span class="pre">MyLookup</span></code>
+object is translated into <code class="docutils literal notranslate"><span class="pre">my_package#</span></code> before being actually
+looked up from the database.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> (<em>str</em>) – The attribute accessed on an instance of the class.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The translated attribute for lookup on the database.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="sibilla.object.ObjectLookup.replace">
+<code class="descname">replace</code><span class="sig-paren">(</span><em>types</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.object.ObjectLookup.replace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overrides the classes used to handle types/attributes on the lookup
+instance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>types</strong> (<em>dict</em>) – A dictionary of key-value pairs where the key
+indicates the type/attribute and the value the class to use
+to handle the specified type/attribute. The standard Oracle
+object types can be overridden by using the constants exposed
+by the <code class="docutils literal notranslate"><span class="pre">ObjectType</span></code> class as key values.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.object.ObjectLookupError">
+<em class="property">exception </em><code class="descclassname">sibilla.object.</code><code class="descname">ObjectLookupError</code><a class="headerlink" href="#sibilla.object.ObjectLookupError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.object.ObjectError" title="sibilla.object.ObjectError"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.object.ObjectError</span></code></a></p>
+<p>Raised when an object lookup fails.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.object.ObjectType">
+<em class="property">class </em><code class="descclassname">sibilla.object.</code><code class="descname">ObjectType</code><a class="headerlink" href="#sibilla.object.ObjectType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code></p>
+<dl class="attribute">
+<dt id="sibilla.object.ObjectType.FUNCTION">
+<code class="descname">FUNCTION</code><em class="property"> = 'FUNCTION'</em><a class="headerlink" href="#sibilla.object.ObjectType.FUNCTION" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sibilla.object.ObjectType.PACKAGE">
+<code class="descname">PACKAGE</code><em class="property"> = 'PACKAGE'</em><a class="headerlink" href="#sibilla.object.ObjectType.PACKAGE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sibilla.object.ObjectType.PROCEDURE">
+<code class="descname">PROCEDURE</code><em class="property"> = 'PROCEDURE'</em><a class="headerlink" href="#sibilla.object.ObjectType.PROCEDURE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sibilla.object.ObjectType.RECORD">
+<code class="descname">RECORD</code><em class="property"> = 'RECORD'</em><a class="headerlink" href="#sibilla.object.ObjectType.RECORD" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sibilla.object.ObjectType.TABLE">
+<code class="descname">TABLE</code><em class="property"> = 'TABLE'</em><a class="headerlink" href="#sibilla.object.ObjectType.TABLE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sibilla.object.ObjectType.VIEW">
+<code class="descname">VIEW</code><em class="property"> = 'VIEW'</em><a class="headerlink" href="#sibilla.object.ObjectType.VIEW" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.object.ObjectTypeError">
+<em class="property">exception </em><code class="descclassname">sibilla.object.</code><code class="descname">ObjectTypeError</code><a class="headerlink" href="#sibilla.object.ObjectTypeError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.object.ObjectError" title="sibilla.object.ObjectError"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.object.ObjectError</span></code></a></p>
+<p>Problems with Oracle object types.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.object.OracleObject">
+<em class="property">class </em><code class="descclassname">sibilla.object.</code><code class="descname">OracleObject</code><span class="sig-paren">(</span><em>db</em>, <em>object_name</em>, <em>object_type</em>, <em>schema</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.object.OracleObject" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="attribute">
+<dt id="sibilla.object.OracleObject.db">
+<code class="descname">db</code><a class="headerlink" href="#sibilla.object.OracleObject.db" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sibilla.object.OracleObject.name">
+<code class="descname">name</code><a class="headerlink" href="#sibilla.object.OracleObject.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sibilla.object.OracleObject.object_type">
+<code class="descname">object_type</code><a class="headerlink" href="#sibilla.object.OracleObject.object_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sibilla.object.OracleObject.renaming">
+<code class="descname">renaming</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.object.OracleObject.renaming" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-sibilla.package">
+<span id="sibilla-package-module"></span><h3>sibilla.package module<a class="headerlink" href="#module-sibilla.package" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="sibilla.package.Package">
+<em class="property">class </em><code class="descclassname">sibilla.package.</code><code class="descname">Package</code><span class="sig-paren">(</span><em>db</em>, <em>name</em>, <em>schema</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.package.Package" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.object.OracleObject" title="sibilla.object.OracleObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.object.OracleObject</span></code></a>, <a class="reference internal" href="#sibilla.caching.Cached" title="sibilla.caching.Cached"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.caching.Cached</span></code></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.package.PackageAttributeError">
+<em class="property">exception </em><code class="descclassname">sibilla.package.</code><code class="descname">PackageAttributeError</code><a class="headerlink" href="#sibilla.package.PackageAttributeError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.DatabaseError</span></code></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-sibilla.procedure">
+<span id="sibilla-procedure-module"></span><h3>sibilla.procedure module<a class="headerlink" href="#module-sibilla.procedure" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="sibilla.procedure.Procedure">
+<em class="property">class </em><code class="descclassname">sibilla.procedure.</code><code class="descname">Procedure</code><span class="sig-paren">(</span><em>db</em>, <em>name</em>, <em>schema</em>, <em>package=None</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.procedure.Procedure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.callable.Callable" title="sibilla.callable.Callable"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.callable.Callable</span></code></a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-sibilla.schema">
+<span id="sibilla-schema-module"></span><h3>sibilla.schema module<a class="headerlink" href="#module-sibilla.schema" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="sibilla.schema.Schema">
+<em class="property">class </em><code class="descclassname">sibilla.schema.</code><code class="descname">Schema</code><span class="sig-paren">(</span><em>db</em>, <em>schema</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.schema.Schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.caching.Cached" title="sibilla.caching.Cached"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.caching.Cached</span></code></a></p>
+<dl class="attribute">
+<dt id="sibilla.schema.Schema.name">
+<code class="descname">name</code><a class="headerlink" href="#sibilla.schema.Schema.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.schema.SchemaError">
+<em class="property">exception </em><code class="descclassname">sibilla.schema.</code><code class="descname">SchemaError</code><a class="headerlink" href="#sibilla.schema.SchemaError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.DatabaseError</span></code></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-sibilla.table">
+<span id="sibilla-table-module"></span><h3>sibilla.table module<a class="headerlink" href="#module-sibilla.table" title="Permalink to this headline">¶</a></h3>
+<dl class="exception">
+<dt id="sibilla.table.PrimaryKeyError">
+<em class="property">exception </em><code class="descclassname">sibilla.table.</code><code class="descname">PrimaryKeyError</code><a class="headerlink" href="#sibilla.table.PrimaryKeyError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.table.TableEntryError" title="sibilla.table.TableEntryError"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.table.TableEntryError</span></code></a></p>
+<p>Raised when unable to make use of a primary key.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.table.SmartRow">
+<em class="property">class </em><code class="descclassname">sibilla.table.</code><code class="descname">SmartRow</code><span class="sig-paren">(</span><em>dataset</em>, <em>kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.table.SmartRow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.table.TableRow" title="sibilla.table.TableRow"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.table.TableRow</span></code></a></p>
+<dl class="method">
+<dt id="sibilla.table.SmartRow.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>name</em>, <em>default=None</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.table.SmartRow.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute getter hook.</p>
+<p>This method provides a convenient customisation interface for
+subclasses of <code class="xref py py-class docutils literal notranslate"><span class="pre">Row</span></code>. Implement it to define custom behaviour
+when retrieving row attributes.</p>
+<p>When the requested attribute cannot be determined, this method should
+raise the <code class="xref py py-class docutils literal notranslate"><span class="pre">RowGetterError</span></code> exception.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.table.Table">
+<em class="property">class </em><code class="descclassname">sibilla.table.</code><code class="descname">Table</code><span class="sig-paren">(</span><em>db</em>, <em>name=None</em>, <em>schema=None</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.table.Table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.object.OracleObject" title="sibilla.object.OracleObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.object.OracleObject</span></code></a>, <a class="reference internal" href="#sibilla.dataset.DataSet" title="sibilla.dataset.DataSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.dataset.DataSet</span></code></a></p>
+<dl class="method">
+<dt id="sibilla.table.Table.drop">
+<code class="descname">drop</code><span class="sig-paren">(</span><em>flush_cache=True</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.table.Table.drop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sibilla.table.Table.insert">
+<code class="descname">insert</code><span class="sig-paren">(</span><em>values</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.table.Table.insert" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sibilla.table.Table.truncate">
+<code class="descname">truncate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.table.Table.truncate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.table.TableEntryError">
+<em class="property">exception </em><code class="descclassname">sibilla.table.</code><code class="descname">TableEntryError</code><a class="headerlink" href="#sibilla.table.TableEntryError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.table.TableError" title="sibilla.table.TableError"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.table.TableError</span></code></a></p>
+<p>Raised when failed to access a table entry.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.table.TableError">
+<em class="property">exception </em><code class="descclassname">sibilla.table.</code><code class="descname">TableError</code><a class="headerlink" href="#sibilla.table.TableError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.DatabaseError</span></code></p>
+<p>Table-related database error.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.table.TableInsertError">
+<em class="property">exception </em><code class="descclassname">sibilla.table.</code><code class="descname">TableInsertError</code><a class="headerlink" href="#sibilla.table.TableInsertError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.table.TableError" title="sibilla.table.TableError"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.table.TableError</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="sibilla.table.TableRow">
+<em class="property">class </em><code class="descclassname">sibilla.table.</code><code class="descname">TableRow</code><span class="sig-paren">(</span><em>dataset</em>, <em>kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.table.TableRow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.dataset.Row" title="sibilla.dataset.Row"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.dataset.Row</span></code></a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-sibilla.view">
+<span id="sibilla-view-module"></span><h3>sibilla.view module<a class="headerlink" href="#module-sibilla.view" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="sibilla.view.View">
+<em class="property">class </em><code class="descclassname">sibilla.view.</code><code class="descname">View</code><span class="sig-paren">(</span><em>db</em>, <em>name=None</em>, <em>schema=None</em><span class="sig-paren">)</span><a class="headerlink" href="#sibilla.view.View" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sibilla.object.OracleObject" title="sibilla.object.OracleObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.object.OracleObject</span></code></a>, <a class="reference internal" href="#sibilla.dataset.DataSet" title="sibilla.dataset.DataSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.dataset.DataSet</span></code></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="sibilla.view.ViewError">
+<em class="property">exception </em><code class="descclassname">sibilla.view.</code><code class="descname">ViewError</code><a class="headerlink" href="#sibilla.view.ViewError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sibilla.DatabaseError</span></code></p>
+<p>View-related database error.</p>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/sibilla_map.svg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">sibilla</span></code> package</a><ul>
+<li><a class="reference internal" href="#module-contents">Module contents</a><ul>
+<li><a class="reference internal" href="#database"><code class="docutils literal notranslate"><span class="pre">Database</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#submodules">Submodules</a><ul>
+<li><a class="reference internal" href="#module-sibilla.caching">sibilla.caching module</a></li>
+<li><a class="reference internal" href="#module-sibilla.callable">sibilla.callable module</a></li>
+<li><a class="reference internal" href="#module-sibilla.dataset">sibilla.dataset module</a></li>
+<li><a class="reference internal" href="#module-sibilla.datatypes">sibilla.datatypes module</a></li>
+<li><a class="reference internal" href="#module-sibilla.function">sibilla.function module</a></li>
+<li><a class="reference internal" href="#module-sibilla.object">sibilla.object module</a></li>
+<li><a class="reference internal" href="#module-sibilla.package">sibilla.package module</a></li>
+<li><a class="reference internal" href="#module-sibilla.procedure">sibilla.procedure module</a></li>
+<li><a class="reference internal" href="#module-sibilla.schema">sibilla.schema module</a></li>
+<li><a class="reference internal" href="#module-sibilla.table">sibilla.table module</a></li>
+<li><a class="reference internal" href="#module-sibilla.view">sibilla.view module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<h3><a href="index.html">Table Of Contents</a></h3>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Gabriele N. Tornetta.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
+      
+      |
+      <a href="_sources/sibilla.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/P403n1x87/sibilla" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
