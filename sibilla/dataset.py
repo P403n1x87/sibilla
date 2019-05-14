@@ -1,13 +1,37 @@
+# This file is part of "sibilla" which is released under GPL.
+#
+# See file LICENCE or go to http://www.gnu.org/licenses/ for full license
+# details.
+#
+# Sibilla is a Python ORM for the Oracle Database.
+#
+# Copyright (c) 2019 Gabriele N. Tornetta <phoenix1987@gmail.com>.
+# All rights reserved.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from functools import update_wrapper
 
 from sibilla import CursorRow, DatabaseError
 from sibilla.caching import Cached, cachedmethod
 from sibilla.object import OracleObject
 
+
 # ---- Exceptions -------------------------------------------------------------
 
 
 class RowError(DatabaseError):
+    """Dataset row error."""
     pass
 
 
@@ -20,18 +44,30 @@ class NoSuchRowError(RowError):
 
 
 class RowAttributeError(RowError):
+    """Row attribute access error."""
     pass
 
 
 class MultipleRowsError(RowError):
+    """Multiple rows returned when only one expected.
+
+    Usually a consequence of a primary key defined on the table class that
+    is not part of the actual table schema and that is violated by the
+    retrieved data.
+    """
     pass
 
 
 class QueryError(DatabaseError):
+    """Database query error."""
     pass
 
 
 class RowGetterError(Exception):
+    """Row getter method error.
+
+    Raised when the requested attribute on the row cannot be determined.
+    """
     pass
 
 
@@ -81,9 +117,19 @@ class Row(Cached):
 
     @property
     def db(self):
+        """Get the underlying database."""
         return self.__dataset__.db
 
     def get(self, name, default=None):
+        """Attribute getter hook.
+
+        This method provides a convenient customisation interface for
+        subclasses of :class:`Row`. Implement it to define custom behaviour
+        when retrieving row attributes.
+
+        When the requested attribute cannot be determined, this method should
+        raise the :class:`RowGetterError` exception.
+        """
         raise RowGetterError()
 
     @cachedmethod

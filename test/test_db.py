@@ -49,6 +49,7 @@ class TestDB:
         )
         assert repr(res) == "PROCEDURE_NAME : PUT_LINE"
         assert res[0] == "PUT_LINE"
+        assert res.__raw__ == ("PUT_LINE",)
 
         res = self.db.fetch_one("""
             select procedure_name

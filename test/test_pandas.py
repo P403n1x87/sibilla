@@ -13,18 +13,19 @@ PASSWORD = "g"
 class DataFrameWrapper(CursorRow):
 
     @staticmethod
-    def from_cursor(cursor):
-        return DataFrame.from_records(
-            list(cursor),
-            columns=[c[0] for c in cursor.description]
-        )
-
-    @staticmethod
-    def from_list(cursor, data):
+    def _to_data_frame(cursor, data):
         return DataFrame.from_records(
             data,
             columns=[c[0] for c in cursor.description]
         )
+
+    @staticmethod
+    def from_cursor(cursor):
+        return DataFrameWrapper._to_data_frame(cursor, cursor)
+
+    @staticmethod
+    def from_list(cursor, data):
+        return DataFrameWrapper._to_data_frame(cursor, data)
 
 
 class TestPandas:
@@ -45,4 +46,8 @@ class TestPandas:
 
     def test_all_objects(self):
         DataSet.set_row_class(None)
-        assert isinstance(self.db.all_objects.fetch_all(owner="G"), DataFrame)
+
+        data = self.db.all_objects.fetch_all(owner="G")
+
+        assert isinstance(data, DataFrame)
+        assert len(data.index) > 1

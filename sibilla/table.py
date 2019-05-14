@@ -1,7 +1,31 @@
+# This file is part of "sibilla" which is released under GPL.
+#
+# See file LICENCE or go to http://www.gnu.org/licenses/ for full license
+# details.
+#
+# Sibilla is a Python ORM for the Oracle Database.
+#
+# Copyright (c) 2019 Gabriele N. Tornetta <phoenix1987@gmail.com>.
+# All rights reserved.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from sibilla import DatabaseError
 from sibilla.object import ObjectType, OracleObject
 
+
 # ---- Exceptions -------------------------------------------------------------
+
 
 class TableError(DatabaseError):
     """Table-related database error."""
@@ -21,6 +45,7 @@ class PrimaryKeyError(TableEntryError):
     """Raised when unable to make use of a primary key."""
     pass
 
+
 # -----------------------------------------------------------------------------
 
 
@@ -28,6 +53,11 @@ from sibilla.dataset import DataSet, Row, RowError, RowGetterError
 
 
 class TableRow(Row):
+    """Table row class.
+
+    Contrary to a normal row, a table row can have a primary key associated to
+    it.
+    """
 
     __slots__ = []
 
@@ -46,6 +76,11 @@ class TableRow(Row):
 
 
 class SmartRow(TableRow):
+    """Smart row class.
+
+    A smart row is a table row that can follow foreign key references and
+    return the referenced row instead of the raw value.
+    """
 
     __slots__ = []
 
@@ -62,6 +97,12 @@ class SmartRow(TableRow):
 
 
 class Table(OracleObject, DataSet):
+    """Oracle table class.
+
+    A table is a data set that can have primary and foreign key constraints.
+    For tables with a primary key constraint, rows can be accessed from a table
+    as if this was indexed by the primary key values.
+    """
 
     __row_class__ = TableRow
 
@@ -79,6 +120,7 @@ class Table(OracleObject, DataSet):
 
     @property
     def __pk__(self):
+        """The table primary key description."""
         if self.__pk is None:
             self.__pk = [e[0] for e in self.db.fetch_all("""
                 select cols.column_name
@@ -101,6 +143,7 @@ class Table(OracleObject, DataSet):
 
     @property
     def __fk__(self):
+        """The table foreign key descriptions."""
         if self.__fk is None:
             # TODO: Support arbitrary foreign keys
             fk_list = self.db.fetch_all("""
@@ -167,11 +210,23 @@ class Table(OracleObject, DataSet):
             return self._get_by_pk(pk)
 
     def drop(self, flush_cache=True):
+        """Drop the table.
+
+        By default, the internal table cache is flushed to allow changes to be
+        synchronised with the database.
+        """
         self.db.plsql('drop table {}'.format(self.name))
         if flush_cache:
             self.db.cache.flush()
 
     def insert(self, values):
+        """Insert values into the table.
+
+        The passed values can either be a single row to add or a list of
+        multiple row to insert as a batch. A row in this case is either a
+        dictionary with the name of the columns and the corresponding values
+        to set, or a tuple with as many entries as the columns of the table.
+        """
         def generate_insert_stmt(v, gen_kwargs=True):
             if isinstance(v, dict):
                 insert_columns = "(" + ", ".join(v.keys()) + ") "
@@ -219,4 +274,5 @@ class Table(OracleObject, DataSet):
             raise TableInsertError(e) from e
 
     def truncate(self):
+        """Truncate the table."""
         self.db.plsql('truncate table {}'.format(self.name))

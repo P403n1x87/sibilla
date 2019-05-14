@@ -1,3 +1,25 @@
+# This file is part of "sibilla" which is released under GPL.
+#
+# See file LICENCE or go to http://www.gnu.org/licenses/ for full license
+# details.
+#
+# Sibilla is a Python ORM for the Oracle Database.
+#
+# Copyright (c) 2019 Gabriele N. Tornetta <phoenix1987@gmail.com>.
+# All rights reserved.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from abc import ABC, abstractmethod
 from typing import Any, Generator
 
@@ -18,10 +40,12 @@ class DatabaseError(SibillaError):
 
 
 class LoginError(DatabaseError):
+    """Database login error."""
     pass
 
 
 class ConnectionError(DatabaseError):
+    """Database connection error."""
     pass
 
 
@@ -30,6 +54,7 @@ class IdentifierError(DatabaseError):
     pass
 
 class CursorRowError(SibillaError):
+    """Cursor row wrapper error."""
     pass
 
 
@@ -37,6 +62,19 @@ class CursorRowError(SibillaError):
 
 
 def sql_identifier(name: str) -> str:
+    """Treat string as SQL identifier.
+
+    SQL identifier are case insensitive, unless they are double-quoted. This
+    helper function ensures that any identifier is treat consistently by
+    returning an upper-case version of the given string if it is not
+    double-quoted, otherwise it return the string itself.
+
+    Example:
+        >>> sql_identifier('foo')
+        'FOO'
+        >>> sql_identifier('"foo"')
+        '"foo"'
+    """
     if (
         not name
         or name == '"'
@@ -65,11 +103,12 @@ class RowWrapper(ABC):
         """Convert the rows of a cursor into richer Python objects.
 
         Subclasses must implement this method in order to instruct the
-        `fetch_all` method on how to wrap the result from the cursor.
+        :func:`Database.fetch_all` method on how to wrap the result from the
+        cursor.
 
         Args:
-            cursor (cx_Oracle.Cursor): The cursor with the results ready to be
-                fetched.
+            cursor (:class:`cx_Oracle.Cursor`): The cursor with the results
+                ready to be fetched.
 
         Returns:
             generator: the wrapped rows.
@@ -85,11 +124,12 @@ class RowWrapper(ABC):
         `fetch_many` method on how to wrap the results in the data list.
 
         Args:
-            cursor (cx_Oracle.Cursor): The cursor used to obtain the `data`.
-            data (list): The list of rows obtained from the given `cursor`.
+            cursor (:class:`cx_Oracle.Cursor`): The cursor used to obtain the
+                `data`.
+            data (``list``): The list of rows obtained from the given `cursor`.
 
         Returns:
-            list: the wrapped rows.
+            ``list``: the wrapped rows.
         """
         ...
 
@@ -98,14 +138,14 @@ class CursorRow(RowWrapper):
     """
     Turn a row of data into a dictionary/list-like object.
 
-    This default implementation of the `RowWrapper` abstract base class allows
-    accessing row values both as attributes as well as tuple entries.
+    This default implementation of the :class:`RowWrapper` abstract base class
+    allows accessing row values both as attributes as well as tuple entries.
 
-    For example, if a query returns the tuple `(10, None, "Hello")` and the
-    corresponding columns are named `A`, `B` and `C`, by wrapping it with
-    `CursorRow` you get an object `row` that gives you the attributes `a`/`A`,
-    `b`/`B` and `c`/`C` for which `row.a = row[0]`, `row.B = row[1]` and
-    `row.c = row[2]`.
+    For example, if a query returns the tuple ``(10, None, "Hello")`` and the
+    corresponding columns are named ``A``, ``B`` and ``C``, by wrapping it with
+    :class:`CursorRow` you get an object ``row`` that gives you the attributes
+    ``a``/``A``, ``b``/``B`` and ``c``/``C`` for which ``row.a = row[0]``,
+    ``row.B = row[1]`` and ``row.c = row[2]``.
     """
 
     @staticmethod
@@ -122,9 +162,10 @@ class CursorRow(RowWrapper):
     def __init__(self, cursor, row, columns=None):
         """CursorRow constructor.
 
-        For performance reasons, an optiona `columns` argument can be provided
-        so that the column names can be determined from the cursor only once
-        and reused for every element in the collection that is to be wrapped.
+        For performance reasons, an optional ``columns`` argument can be
+        provided so that the column names can be determined from the cursor
+        only once and reused for every element in the collection that is to be
+        wrapped.
         """
         columns = columns or [c[0] for c in cursor.description]
 
@@ -172,25 +213,33 @@ from sibilla.object import ObjectLookup, ObjectType
 
 
 class Database(cx_Oracle.Connection):
-    """
+    """The Database class.
+
     A subclass of the DB API specification-compliant cx_Oracle.Connection
-    object, extended with additional features proper of Oracle Databases (11g
-    and above).
+    object, extended with additional features of Oracle Databases.
+
+    Objects of this kind identify the database connection with the database
+    itself. This is because the :class:`Database` class offers the capability
+    of accessing Oracle stored object in a Pythonic way. Typical examples are
+    data access from tables and views, which would normally require the user to
+    embed "alien" SQL queries in Python code. The same would be true if the
+    user wishes to call a stored function or procedure. Traditionally, this
+    would be done by writing a block of PL/SQL code or via the
+    :func:`cx_Oracle.Cursor.callfunc` and :func:`cx_Oracle.Cursor.callproc`
+    methods. Sibilla allows you to call them as if they were plain Python
+    methods of any :class:`Database` instance.
 
     Example:
-        To create an Database instance, import ``Database`` from ``sibilla``
-        and pass `username`, `password` and `dsn` to it (plus any other
-        optional argument accepted by the constructor of
-        ``cx_Oracle.Connection``):
+        To create an Database instance, import :class:`Database` from
+        ``sibilla`` and pass ``username``, ``password`` and ``dsn`` to it (plus
+        any other optional argument accepted by the constructor of
+        :class:`cx_Oracle.Connection`):
 
             >>> from sibilla import Database
-
-            ...
-
             >>> db = Database(username, password, dsn=TNS)
 
-    The class has built-in introspection for Oracle objects, like Tables,
-    Views, Functions, Procedures and Packages.
+    The :class:`Database` class offers a built-in look-up for Oracle objects,
+    like Tables, Views, Functions, Procedures and Packages.
 
     Example:
         To create a reference to a table called ``COUNTRY`` in the Oracle
@@ -200,60 +249,58 @@ class Database(cx_Oracle.Connection):
             >>> db.country
             <table 'COUNTRY'>
 
-    A table is a `callable` object that can be used to reference single rows
-    from the corresponding table and treat them like objects. It is expected
-    that the referenced table has a column named ID holding a primary key
-    value.
-
-    Examples:
-        For tables with a primary key on a column called ``ID``, one can
-        reference a row with ID = n simply with
-
-            >>> db.country(n)
-            <row from <table 'COUNTRY'> with ID n>
-
-        To reference a row through another set of criteria, paris of column
-        names and values can be passed to the table:
-
-            >>> db.country(name = 'Italy')
-            <row from <table 'COUNTRY'> with ID IT>
-
-    A reference to a row can be treated like an object. The value of other
-    columns can be accessed as attributes.
-
-    Example:
-        If ``row`` is a reference to a row in the table ``COUNTRY`` with
-        ID = 'IT', one can access the ``NAME`` column with
-
-            >>> row = db.country('IT')
-            >>> row.name
-            'Italy'
+    A table is a special instance of a :class:`sibilla.dataset.DataSet` object,
+    which allows you to perform basic SQL queries in a Pythonic way, without
+    writing a single line of SQL code. See the sections on
+    :class:`siblla.dataset.DataSet` and :class:`sibilla.table.Table` for more
+    details.
 
     In a similar way one can access stored `functions`, `procedures` and
     `packages`. For functions and procedures stored in a package, the code will
     try to figure out whether the sought object is a function or a procedure.
-    When there are overloads that, due to the limitations of python, cannot be
-    resolved, one can explicitly call a procedure or a function by accessing
-    the ``proc`` and ``func`` attributes of a package.
+    When there are overloaded objects that cannot be resolved, one can
+    explicitly call a procedure or a function by accessing the ``proc`` and
+    ``func`` attributes of a :class:`sibilla.package.Package` instance.
 
     Example:
-        Assume that the database holds a package ``foo`` containing overloaded
-        procedures and functions named ``bar``. To call ``foo.bar`` as a
-        procedure one has to use:
+        Assume that the database has a stored package called ``foo`` containing
+        (overloaded) procedures and functions named ``bar``. To get
+        ``foo.bar`` as a procedure one has to use:
 
             >>> db.foo.proc.bar
+            <procedure 'BAR' from <package 'FOO'>>
 
-        Similarly, to call bar as a function,
+        Similarly, to get bar as a function,
 
             >>> db.foo.func.bar
+            <function 'BAR' from <package 'FOO'>>
 
         When there are no ambiguities like in the previous case (e.g. there are
         only functions or only procedures named ``bar``), one can simply use
 
             >>> db.foo.bar
+
+        One can then call stored functions and procedures as normal Python
+        functions/methods, using both positional and keyword arguments.
+
+            >>> db.foo.bar(42)
+            'The answer is 42. So long and thanks for all the fish!'
     """
 
     class Scope(type):
+        """Oracle Data Dictionary scopes.
+
+        This type is used to specify which scope the database look-up must use
+        when looking up stored objects. Choose between ``ALL``, ``DBA`` and
+        ``USER``. For more details on the meaning of these scopes, please refer
+        to the Oracle documentation.
+
+        The ``ALL`` scope is set by default. However, if you do not make use
+        of many objects from different schema other than the current one,
+        consider using the ``USER`` scope instead. This will make object
+        look-ups faster as the search is restricted to a smaller view.
+        """
+
         ALL = "all"
         DBA = "dba"
         USER = "user"
@@ -263,6 +310,23 @@ class Database(cx_Oracle.Connection):
     __row_wrapper__ = CursorRow
 
     def __init__(self, *args, **kwargs):
+        """``Database`` constructor.
+
+        The arguments are the same as those required by the
+        :class:`cx_Oracle.Connection` class. The :class:`Database` is
+        initialised with a default instance of
+        :class:`sibilla.object.ObjectLookup`, which is at the heart of the
+        stored object look-up. Previously retrieved objects are normally cached
+        for faster access and the cache is exposed with the ``cache``
+        attribute. The user is in charge of `flushing` caches when objects in
+        the database change and the new state is to be retrieved. For more
+        details about cache objects see :class:`sibilla.caching.Cached`.
+
+        The initialisation is completed with a call to
+        ``SYS.DBMS_OUTPUT.ENABLE`` so that any text output generated with calls
+        to, e.g. ``SYS.DBMS_OUTPUT.PUT_LINE`` can be retrieved with the
+        ``get_output`` method.
+        """
         try:
             super().__init__(*args, **kwargs)
         except cx_Oracle.DatabaseError as e:
@@ -287,11 +351,12 @@ class Database(cx_Oracle.Connection):
         return getattr(self.__lookup__, name, None)
 
     def get_errors(self, name: str=None, type: str=None) -> list:
-        """
-        Returns all the occurred errors in the form of CursorRow with the
-        fields _name_, _type_, _line_, _position_, _error_ and _text_. The
-        errors can be filtered by object name and type via the two optional
-        arguments
+        """Get Oracle errors.
+
+        Retrieves all the current errors for the logged user. Internally, this
+        method performs a query on the inner join between ``USER_ERRORS`` and
+        ``USER_SOURCES``. The result is a collection of records with the fields
+        ``name``, ``type``, ``line``, ``position``, ``error`` and ``text``.
 
         Args:
             name (str): Filter errors by object name. A pattern can be used
@@ -300,7 +365,7 @@ class Database(cx_Oracle.Connection):
                 (case insensitive)
 
         Returns:
-            list: a list of CursorRow objects describing all the requested
+            `list`: a list of CursorRow objects describing all the requested
                 error messages.
         """
 
@@ -350,7 +415,7 @@ class Database(cx_Oracle.Connection):
         return text
 
     def fetch_one(self, stmt: str, *args, **kwargs) -> Any:
-        """Fetches only one row from the execution of the provided statement.
+        """Fetch a single row from the execution of the provided statement.
 
         Bind variables can be provided both as positional and as keyword
         arguments to this method.
@@ -361,8 +426,8 @@ class Database(cx_Oracle.Connection):
             **kwargs: Arbitrary keyword arguments for named bind variables.
 
         Returns:
-            object: An instance of the `__row_rapper__` class if not `None`
-                or `tuple` otherwise.
+            `object`: An instance of the ``__row_rapper__`` class if not
+                ``None`` or `tuple` otherwise.
         """
         cursor = self.plsql(stmt, *args, **kwargs)
         res = cursor.fetchone()
@@ -385,9 +450,9 @@ class Database(cx_Oracle.Connection):
             **kwargs: Arbitrary keyword arguments for named bind variables.
 
         Returns:
-            generator: A collection of all the records returned by the provided
-            statement, either wrapped in `__row_wrapper__` if not `None` or
-            as `tuple`s otherwise.
+            `generator`: A collection of all the records returned by the
+                provided statement, either wrapped in ``__row_wrapper__`` if
+                not ``None`` or as ``tuple`` s otherwise.
         """
         cursor = self.plsql(stmt, *args, **kwargs)
 
@@ -414,9 +479,9 @@ class Database(cx_Oracle.Connection):
             **kwargs: Arbitrary keyword arguments for named bind variables.
 
         Returns:
-            list: A list of at most n records returned by the provided
-            statement, either wrapped in `__row_wrapper__` if not `None` or
-            as `tuple`s otherwise.
+            `list`: A list of at most n records returned by the provided
+            statement, either wrapped in ``__row_wrapper__`` if not ``None`` or
+            as ``tuple`` s otherwise.
         """
         cursor, data = self._fetch_many(stmt, n, *args, **kwargs)
 
@@ -427,14 +492,14 @@ class Database(cx_Oracle.Connection):
 
     # TODO: Batch execute: https://blogs.oracle.com/opal/efficient-and-scalable-batch-statement-execution-in-python-cx_oracle
     def plsql(self, stmt: str, *args, batch: list=None, **kwargs):
-        """Executes the provided (PL/)SQL code.
+        """Execute (PL/)SQL code.
 
         Bind variables can be provided both as positional and as keyword
         arguments to this method. Returns a cursor in case data needs to be
         fetched out of it.
 
         If the provided statement is to be executed multiple times but with
-        different values, the `batch` argument should be used instead of
+        different values, the ``batch`` argument should be used instead of
         implementing a loop in Python in order to improve performance.
 
         Args:
@@ -445,7 +510,8 @@ class Database(cx_Oracle.Connection):
             **kwargs: Arbitrary keyword arguments for named bind variables.
 
         Returns:
-            cx_Oracle.cursor: the cursor associated with the code execution.
+            :class:`cx_Oracle.Cursor`: the cursor associated with the code
+                execution.
         """
         c = 0
         c += 1 if args else 0
@@ -475,9 +541,23 @@ class Database(cx_Oracle.Connection):
             raise DatabaseError(e) from e
 
     def set_scope(self, scope):
+        """Set the Oracle Data Dictionary scope.
+
+        Use one of the ``Database.Scope`` attributes. By default, a
+        ``Database`` instance is created with the ``Database.Scope.ALL`` scope.
+        For applications that rely mostly or exclusively on the logged user
+        schema, it is recommended that the scope be set to
+        ``Database.Scope.USER`` for better performance.
+        """
+
         self.__scope__ = scope
 
     def set_row_wrapper(self, wrapper):
+        """Set the row wrapper class.
+
+        This class is used to wrap the raw rows returned by a SQL query around
+        richer Python objects. See :class:`RowWrapper` for more details.
+        """
         self.__row_wrapper__ = wrapper
 
     # TODO: This can use Function._Function__datatype_mapping to map python
@@ -486,14 +566,14 @@ class Database(cx_Oracle.Connection):
         """Create a PL/SQL variable reference.
 
         One can either pass the name of the variable type as defined in the
-        `cx_Oracle` package (e.g. `STRING`), or pass the type itself (e.g.
-        `cx_Oracle.STRING`).
+        ``cx_Oracle`` package (e.g. `STRING`), or pass the type itself (e.g.
+        ``cx_Oracle.STRING``).
 
         Args:
             var_type: The type of the variable to create.
 
         Returns:
-            object: The requested variable reference.
+            `object`: The requested variable reference.
         """
         cur = self.cursor()
         return cur.var(
@@ -522,12 +602,13 @@ class Database(cx_Oracle.Connection):
 
     @property
     def __lookup__(self):
-        """
-        Read-only attribute. An internal ``ObjectLookup`` object to describe
-        how to discover database objects. The default classes can be overridden
-        with a call to the ``replace`` method to handle custom behaviour that
-        best reflect the database design. See the section dedicated to  the
-        ``ObjectLookup`` class for examples.
+        """Internal ``ObjectLookup`` for object discovery.
+
+        The default classes can be overridden with a call to the
+        :method:`sibilla.object.ObjectLookup.replace` method to handle custom
+        behaviour that best reflect the database design. See the section
+        dedicated to  the :class:`sibilla.object.ObjectLookup`` class for
+        examples.
         """
 
         return self._default_lookup

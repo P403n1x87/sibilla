@@ -1,4 +1,27 @@
+# This file is part of "sibilla" which is released under GPL.
+#
+# See file LICENCE or go to http://www.gnu.org/licenses/ for full license
+# details.
+#
+# Sibilla is a Python ORM for the Oracle Database.
+#
+# Copyright (c) 2019 Gabriele N. Tornetta <phoenix1987@gmail.com>.
+# All rights reserved.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import cx_Oracle
+
 from sibilla import datatypes
 from sibilla.callable import Callable, CallableError
 from sibilla.object import ObjectType
@@ -7,6 +30,12 @@ from sibilla.object import ObjectType
 
 
 class Function(Callable):
+    """Oracle stored function.
+
+    This class implements Oracle stored functions, including those stored
+    inside packages as Python callable objects so that they can be called as
+    native Python functions and methods.
+    """
 
     __datatype_mapping = datatypes.mapping
 
@@ -64,6 +93,7 @@ class Function(Callable):
 
     @property
     def return_type(self):
+        """The function return type."""
         return self.__ret_type
 
     def __call__(self, *args, **kwargs):
