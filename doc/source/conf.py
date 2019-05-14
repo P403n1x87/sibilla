@@ -16,6 +16,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath('../..'))
+print(os.path.abspath('../..'))
 
 
 # -- Project information -----------------------------------------------------
@@ -77,16 +78,23 @@ pygments_style = 'sphinx'
 
 # -- Options for HTML output -------------------------------------------------
 
+html_title = 'Sibilla Documentation'
+
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
 html_theme = 'alabaster'
+html_logo = 'images/sibilla_map.svg'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'github_user': 'P403n1x87',
+    'github_repo': 'sibilla',
+    'github_banner': True,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -101,7 +109,7 @@ html_static_path = ['_static']
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
 #
-# html_sidebars = {}
+html_sidebars = { '**': ['localtoc.html', 'relations.html', 'searchbox.html'] }
 
 
 # -- Options for HTMLHelp output ---------------------------------------------
