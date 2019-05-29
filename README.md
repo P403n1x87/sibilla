@@ -61,16 +61,16 @@ Alternatively, it can be installed with pip from GitHub with
 python3 -m pip install git+https://github.com/P403n1x87/sibilla
 ~~~
 
-## Example
+## Examples
 
 A minimal example to connect to a database and access a table called `CUSTOMER`
 is
 
 ~~~~ python
-from sibilla import OracleDB
+from sibilla import Database
 
 
-db = OracleDB("username", "password", dsn="dsn")
+db = Database("username", "password", dsn="dsn")
 customer_table = db.customer
 ~~~~
 
