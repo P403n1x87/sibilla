@@ -29,11 +29,13 @@ from sibilla.object import ObjectType, OracleObject
 
 class TableError(DatabaseError):
     """Table-related database error."""
+
     pass
 
 
 class TableEntryError(TableError):
     """Raised when failed to access a table entry."""
+
     pass
 
 
@@ -43,6 +45,7 @@ class TableInsertError(TableError):
 
 class PrimaryKeyError(TableEntryError):
     """Raised when unable to make use of a primary key."""
+
     pass
 
 
@@ -64,14 +67,14 @@ class TableRow(Row):
     @property
     def __pk__(self):
         record = self._get_record()
-        return {
-            k: getattr(record, k) for k in self.__dataset__.__pk__
-        } if self.__dataset__.__pk__ else None
+        return (
+            {k: getattr(record, k) for k in self.__dataset__.__pk__}
+            if self.__dataset__.__pk__
+            else None
+        )
 
     def __repr__(self):
-        ident = " with PK '{}'".format(
-            self.__pk__
-        ) if self.__pk__ else ""
+        ident = " with PK '{}'".format(self.__pk__) if self.__pk__ else ""
         return "<row from {}{}>".format(self.__dataset__, ident)
 
 
@@ -86,10 +89,7 @@ class SmartRow(TableRow):
 
     def get(self, name, default=None):
         try:
-            foreign_table = getattr(
-                self.__dataset__.db,
-                self.__dataset__.__fk__[name]
-            )
+            foreign_table = getattr(self.__dataset__.db, self.__dataset__.__fk__[name])
             return foreign_table[self.__field__(name)]
         except KeyError:
             # Not a foreign key
@@ -122,22 +122,28 @@ class Table(OracleObject, DataSet):
     def __pk__(self):
         """The table primary key description."""
         if self.__pk is None:
-            self.__pk = [e[0] for e in self.db.fetch_all("""
-                select cols.column_name
-                from   {}_constraints  cons
-                      ,{}_cons_columns cols
-                where  cols.table_name      = :tab
-                   and cons.status          = 'ENABLED'
-                   and cons.constraint_type = 'P'
-                   and cons.constraint_name = cols.constraint_name
-                   and cons.owner           = cols.owner
-                   {}
-                order by cols.position
-                """.format(
-                    *["all" if self.__schema__ else self.db.__scope__] * 2,
-                    ("and owner = '"+self.__schema__+"'") if self.__schema__ else ""
-                ), self.name
-            )]
+            scope = "all" if self.__schema__ else self.db.__scope__
+            self.__pk = [
+                e[0]
+                for e in self.db.fetch_all(
+                    """
+                    select cols.column_name
+                    from   {}_constraints  cons
+                          ,{}_cons_columns cols
+                    where  cols.table_name      = :tab
+                       and cons.status          = 'ENABLED'
+                       and cons.constraint_type = 'P'
+                       and cons.constraint_name = cols.constraint_name
+                       and cons.owner           = cols.owner
+                       and cols.owner           = :owner
+                    order by cols.position
+                    """.format(
+                        scope, scope
+                    ),
+                    self.name,
+                    self.__schema__ or self.db.session_user,
+                )
+            ]
 
         return self.__pk
 
@@ -146,7 +152,9 @@ class Table(OracleObject, DataSet):
         """The table foreign key descriptions."""
         if self.__fk is None:
             # TODO: Support arbitrary foreign keys
-            fk_list = self.db.fetch_all("""
+            scope = "all" if self.__schema__ else self.db.__scope__
+            fk_list = self.db.fetch_all(
+                """
                 select cols.column_name
                       ,cond.table_name
                 from   {}_constraints  cons
@@ -158,13 +166,13 @@ class Table(OracleObject, DataSet):
                    and cons.constraint_name = cols.constraint_name
                    and cons.owner           = cols.owner
                    and cond.constraint_name = cons.r_constraint_name
-                   {}
+                   and cols.owner           = :owner
                 order by cols.position
                 """.format(
-                    *["all" if self.__schema__ else self.db.__scope__] * 3,
-                    ("and owner = '"+self.__schema__+"'") if self.__schema__ else ""
-
-                ), self.name
+                    scope, scope, scope
+                ),
+                self.name,
+                self.__schema__ or self.db.session_user,
             )
 
             self.__fk = {k.lower(): v.lower() for k, v in fk_list}
@@ -173,7 +181,7 @@ class Table(OracleObject, DataSet):
 
     def _get_by_pk(self, pk):
         if type(pk) not in (list, tuple):
-            pk = (pk, )
+            pk = (pk,)
 
         if len(self.__pk__) != len(pk):
             raise PrimaryKeyError(
@@ -182,16 +190,10 @@ class Table(OracleObject, DataSet):
             )
 
         try:
-            return self.__row_class__(
-                self,
-                dict(list(zip(self.__pk__, pk)))
-            )
+            return self.__row_class__(self, dict(list(zip(self.__pk__, pk))))
         except RowError:
             raise PrimaryKeyError(
-                "No entry with PK '{}' in table {}".format(
-                    repr(pk),
-                    self.name
-                )
+                "No entry with PK '{}' in table {}".format(repr(pk), self.name)
             )
 
     def __getitem__(self, pk):
@@ -209,13 +211,32 @@ class Table(OracleObject, DataSet):
         else:
             return self._get_by_pk(pk)
 
+    def count(self, where=None, order_by=None, **kwargs):
+        """Count the number of elements that match the given criteria.
+
+        Args:
+            where (any): a where clause in the form of tuples (AND) and lists (OR).
+
+            order_by (list): list of column names to order on.
+
+            **kwargs: keywords arguments can be provided instead of a where clause
+                when the query should match all the criteria.
+        """
+        statement, binds = self._prepare_fetch(["count(*)"], where, order_by, kwargs)
+        result, = self.db.plsql(statement, **binds)
+
+        if not result:
+            return None
+
+        return result[0]
+
     def drop(self, flush_cache=True):
         """Drop the table.
 
         By default, the internal table cache is flushed to allow changes to be
         synchronised with the database.
         """
-        self.db.plsql('drop table {}'.format(self.name))
+        self.db.plsql("drop table {}".format(self.name))
         if flush_cache:
             self.db.cache.flush()
 
@@ -227,6 +248,7 @@ class Table(OracleObject, DataSet):
         dictionary with the name of the columns and the corresponding values
         to set, or a tuple with as many entries as the columns of the table.
         """
+
         def generate_insert_stmt(v, gen_kwargs=True):
             if isinstance(v, dict):
                 insert_columns = "(" + ", ".join(v.keys()) + ") "
@@ -243,16 +265,17 @@ class Table(OracleObject, DataSet):
 
                 insert_values = ", ".join([":" + k for k in self.__cols__])
                 insert_columns = ""
-                insert_kwargs = (
-                    dict(list(zip(self.__cols__, v))) if gen_kwargs else {}
-                )
+                insert_kwargs = dict(list(zip(self.__cols__, v))) if gen_kwargs else {}
 
             else:
                 raise TableInsertError("Invalid type for values to insert.")
 
-            return "insert into {} {}values ({})".format(
-                self.name, insert_columns, insert_values
-            ), insert_kwargs
+            return (
+                "insert into {} {}values ({})".format(
+                    self.name, insert_columns, insert_values
+                ),
+                insert_kwargs,
+            )
 
         if not values:
             return
@@ -262,17 +285,16 @@ class Table(OracleObject, DataSet):
             #       See https://github.com/oracle/python-cx_Oracle/issues/200
             is_list = isinstance(values, list)
             insert_stmt, insert_kwargs = generate_insert_stmt(
-                values[0] if is_list else values,
-                not is_list
+                values[0] if is_list else values, not is_list
             )
             self.db.plsql(
                 insert_stmt,
                 batch=values if isinstance(values, list) else None,
-                **insert_kwargs
+                **insert_kwargs,
             )
         except DatabaseError as e:
             raise TableInsertError(e) from e
 
     def truncate(self):
         """Truncate the table."""
-        self.db.plsql('truncate table {}'.format(self.name))
+        self.db.plsql("truncate table {}".format(self.name))

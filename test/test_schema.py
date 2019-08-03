@@ -14,7 +14,6 @@ STUDENT_NO = "20060105"
 
 
 class TestSchema:
-
     @classmethod
     def setup_class(cls):
         cls.db = Database(USER, PASSWORD, "XE", events=True)
@@ -47,3 +46,10 @@ class TestSchema:
 
         self.db.sys.dbms_output.put_line(STUDENT_NO)
         assert self.db.get_output()[:-1] == STUDENT_NO
+
+    def test_procedures_in_z_schema(self):
+        self.db.z.print("Hello")
+        assert self.db.get_output() == "Hello\n"
+
+        self.db.z.callable_package.print("World")
+        assert self.db.get_output() == "World\n"

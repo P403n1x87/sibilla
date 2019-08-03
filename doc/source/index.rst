@@ -181,7 +181,7 @@ the numeric column ``ID``. Assuming that the table ``ACCOUNT`` has a row with
 ID 42, one can fetch this row with::
 
   >>> db.account[42]
-  <row from <table 'ACCOUNT' with PK '{'ID': 42}'>
+  <row from <table 'ACCOUNT'> with PK '{'ID': 42}'>
 
 Refer to the :class:`sibilla.table.Table` for more details on primary keys and
 the remarks of the `slice` notation.
@@ -214,7 +214,7 @@ by the :class:`sibilla.table.Table` to return query results::
   >>> from sibilla.table import SmartRow, Table
   >>> Table.set_row_class(SmartRow)
   >>> db.account[42].currency
-  <row from <table 'CURRENCY' with PK '{'ID': 12}'>
+  <row from <table 'CURRENCY'> with PK '{'ID': 12}'>
   >>> db.account[42].currency.name
   'EURO'
 

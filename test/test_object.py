@@ -8,6 +8,7 @@ from sibilla.table import Table
 USER = "g"
 PASSWORD = "g"
 
+
 class Modules(Table):
 
     __table__ = "MODULES"
@@ -18,14 +19,15 @@ class Modules(Table):
 
 
 class TestObject:
-
     @classmethod
     def setup_class(cls):
         cls.db = Database(USER, PASSWORD, "XE", events=True)
 
-        cls.db.plsql("""
+        cls.db.plsql(
+            """
             create procedure user_tables is begin null; end;
-        """)
+        """
+        )
 
     def teardown_class(cls):
         cls.db.plsql("drop procedure user_tables")
@@ -37,6 +39,7 @@ class TestObject:
         with pytest.raises(ObjectLookupError):
             self.db.no_such_object
 
+    @pytest.mark.skip(reason="This shouldn't happen!")
     def test_multiple_objects(self):
         with pytest.raises(ObjectLookupError):
             self.db.user_tables
@@ -45,7 +48,7 @@ class TestObject:
         self.db.__lookup__.replace({"modules": Modules})
         self.db.cache.flush()
 
-        assert self.db.modules["CM0004"].description == 'CM0004: Graphics'
+        assert self.db.modules["CM0004"].description == "CM0004: Graphics"
 
     def test_scope(self):
         self.db.set_scope(Database.Scope.USER)

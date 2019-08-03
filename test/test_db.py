@@ -13,7 +13,6 @@ PASSWORD = "g"
 
 
 class TestDB:
-
     @classmethod
     def setup_class(cls):
         cls.db = Database(USER, PASSWORD, "XE", events=True)
@@ -45,56 +44,66 @@ class TestDB:
                and procedure_name = :proc_name
             """,
             obj_name="DBMS_OUTPUT",
-            proc_name="PUT_LINE"
+            proc_name="PUT_LINE",
         )
         assert repr(res) == "PROCEDURE_NAME : PUT_LINE"
         assert res[0] == "PUT_LINE"
         assert res.__raw__ == ("PUT_LINE",)
 
-        res = self.db.fetch_one("""
+        res = self.db.fetch_one(
+            """
             select procedure_name
             from   all_procedures
             where  object_name    = :obj_name
                and procedure_name = :proc_name
-            """, "DBMS_OUTPUT", "PUT_LINE")
+            """,
+            "DBMS_OUTPUT",
+            "PUT_LINE",
+        )
 
         assert res.proceDure_name == "PUT_LINE"
         assert res[0] == "PUT_LINE"
         assert dir(res) == ["PROCEDURE_NAME"]
 
-        res = self.db.fetch_all("""
+        res = self.db.fetch_all(
+            """
             select procedure_name
             from   all_procedures
             where  object_name = :obj_name
-        """, "DBMS_OUTPUT")
+        """,
+            "DBMS_OUTPUT",
+        )
         assert len(list(res)) > 1
 
-        res = self.db.fetch_many("""
+        res = self.db.fetch_many(
+            """
             select procedure_name
             from   all_procedures
             where  object_name = :obj_name
-        """, 4, "DBMS_OUTPUT")
+        """,
+            4,
+            "DBMS_OUTPUT",
+        )
         assert len(res) == 4
 
     def test_plsql(self):
-        self.db.plsql(
-            "begin dbms_output.put_line(:msg); end;",
-            msg='Hello PLSQL'
-        )
+        self.db.plsql("begin dbms_output.put_line(:msg); end;", msg="Hello PLSQL")
         assert self.db.get_output()
 
         with pytest.raises(DatabaseError):
             self.db.plsql("select sysdate from dual", 10, a=20)
 
     def test_get_errors(self):
-        self.db.plsql("""
+        self.db.plsql(
+            """
             create or replace procedure with_errors
             is
             begin
                 invalid_identifier;
             end;
-        """)
-        errors = list(self.db.get_errors(name='%', type='%'))
+        """
+        )
+        errors = list(self.db.get_errors(name="%", type="%"))
         assert len(errors) == 2
 
         error = errors[0]
@@ -114,14 +123,14 @@ class TestDB:
         with pytest.raises(IdentifierError):
             sql_identifier('"')
         with pytest.raises(IdentifierError):
-            sql_identifier('')
+            sql_identifier("")
 
     def test_cursor_row(self):
         with pytest.raises(CursorRowError):
             CursorRow(None, None, ("Col",))
 
         with pytest.raises(CursorRowError):
-            CursorRow(None, (12, 10), ("Col", ))
+            CursorRow(None, (12, 10), ("Col",))
 
     def test_db_login_error(self):
         with pytest.raises(LoginError):
@@ -140,3 +149,6 @@ class TestDB:
         assert isinstance(self.db.all_objects.fetch_all(), cx_Oracle.Cursor)
         assert isinstance(self.db.user_objects.fetch_many(2), list)
         assert isinstance(self.db.all_objects.fetch_one(), tuple)
+
+    def test_sys_context(self):
+        assert self.db.sys_context("userenv", "current_user") == "G"

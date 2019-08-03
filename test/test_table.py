@@ -1,27 +1,34 @@
 import pytest
 
 from sibilla import ConnectionError, Database, DatabaseError, LoginError
-from sibilla.dataset import QueryError
+from sibilla.dataset import QueryError, Row, RowAttributeError
 from sibilla.object import ObjectLookupError
-from sibilla.table import (PrimaryKeyError, Table, TableEntryError, TableError,
-                           TableInsertError)
+from sibilla.table import (
+    PrimaryKeyError,
+    SmartRow,
+    Table,
+    TableEntryError,
+    TableError,
+    TableInsertError,
+)
 
 USER = "g"
 PASSWORD = "g"
 
 
 class TestTable:
-
     @classmethod
     def setup_class(cls):
         cls.db = Database(USER, PASSWORD, "XE", events=True)
 
-        cls.db.plsql("""
+        cls.db.plsql(
+            """
             create table test_slice(
                 id number(9),
                 constraint id#p primary key (id)
             )
-        """)
+        """
+        )
 
     @classmethod
     def teardown_class(cls):
@@ -32,9 +39,7 @@ class TestTable:
             Table(self.db)
 
     def test_cols(self):
-        assert self.db.students.__cols__ == [
-            'NO', 'SURNAME', 'FORENAME'
-        ]
+        assert self.db.students.__cols__ == ["NO", "SURNAME", "FORENAME"]
 
     def test_pk(self):
         assert self.db.students.__pk__ == ["NO"]
@@ -42,8 +47,8 @@ class TestTable:
 
     def test_fk(self):
         assert self.db.marks.__fk__ == {
-            'module_code': 'modules',
-            'student_no': 'students',
+            "module_code": "modules",
+            "student_no": "students",
         }
 
     def test_iter(self):
@@ -53,13 +58,8 @@ class TestTable:
         result = self.db.marks.fetch_all(
             select=["module_code", "mark"],
             where=[
-                ({
-                    'student_no': "20060101",
-                    'module_code': "CM0003"
-                },),
-                {
-                    'student_no': "20060105"
-                }
+                ({"student_no": "20060101", "module_code": "CM0003"},),
+                {"student_no": "20060105"},
             ],
         )
 
@@ -70,35 +70,37 @@ class TestTable:
         with pytest.raises(QueryError):
             self.db.marks.fetch_all(
                 select=["module_code", "mark"],
-                where={
-                    'student_no': "20060101",
-                    'module_code': "CM0003"
-                },
+                where={"student_no": "20060101", "module_code": "CM0003"},
             )
 
     def test_fetch_one(self):
-        assert self.db.marks.fetch_one(
-            where=({
-                'student_no': "20060101",
-                'module_code': "CM0003"
-            },),
-        ).module_code.code == "CM0003"
+        Table.set_row_class(SmartRow)
+        assert (
+            self.db.marks.fetch_one(
+                where=({"student_no": "20060101", "module_code": "CM0003"},)
+            ).module_code.code
+            == "CM0003"
+        )
 
         assert not self.db.marks.fetch_one(where="1=0")
 
-        assert self.db.marks.fetch_one(
-            student_no="20060101",
-            module_code="CM0003"
-        ).module_code.code == "CM0003"
+        assert (
+            self.db.marks.fetch_one(
+                student_no="20060101", module_code="CM0003"
+            ).module_code.code
+            == "CM0003"
+        )
+        Table.set_row_class(Row)
 
     def test_fetch_many(self):
-        assert len(self.db.marks.fetch_many(
-            2,
-            where=({
-                'student_no': "20060101",
-                'module_code': "CM0003"
-            },),
-        )) == 1
+        assert (
+            len(
+                self.db.marks.fetch_many(
+                    2, where=({"student_no": "20060101", "module_code": "CM0003"},)
+                )
+            )
+            == 1
+        )
 
     def test_call(self):
         assert self.db.students() == self.db.students
@@ -131,6 +133,13 @@ class TestTable:
         self.db.test_slice.insert(tuple())
         self.db.test_slice.insert({})
 
+    def test_select(self):
+        student = self.db.students.fetch_one(["no"])
+        with pytest.raises(RowAttributeError):
+            print(student.surname)
+
+        assert self.db.students.fetch_one(["count(*) c"]).c == 5
+
     def test_describe(self):
         assert len(self.db.students.describe()) == 3
 
@@ -143,17 +152,17 @@ class TestTable:
         self.db.plsql("create table drop_me(no varchar(10), aye number(1))")
 
         # ---- Test inserts ----
-        self.db.drop_me.insert(('a', 0))
-        self.db.drop_me.insert({'no': 'test'})
+        self.db.drop_me.insert(("a", 0))
+        self.db.drop_me.insert({"no": "test"})
 
         with pytest.raises(TableInsertError):
             self.db.drop_me.insert("nonsense")
 
         with pytest.raises(TableInsertError):
-            self.db.drop_me.insert(("too short", ))
+            self.db.drop_me.insert(("too short",))
 
         with pytest.raises(TableInsertError):
-            self.db.drop_me.insert({'answer': 42})
+            self.db.drop_me.insert({"answer": 42})
 
         assert len(list(self.db.drop_me)) == 2
 
@@ -167,3 +176,7 @@ class TestTable:
         with pytest.raises(ObjectLookupError):
             self.db.drop_me.drop()
             self.db.drop_me
+
+    def test_count(self):
+        assert self.db.students.count() == 5
+        assert self.db.students.count(no="20060105") == 1

@@ -20,41 +20,52 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from abc import ABC, abstractmethod
 from typing import Any, Generator
 
 import cx_Oracle
 
 
+SIBILLA_DEBUG = os.environ.get("SIBILLA_DEBUG", False)
+
 # ---- Module exceptions ------------------------------------------------------
 
 
 class SibillaError(Exception):
     """Base Sibilla exception."""
+
     pass
 
 
 class DatabaseError(SibillaError):
     """Generic database error."""
+
     pass
 
 
 class LoginError(DatabaseError):
     """Database login error."""
+
     pass
 
 
 class ConnectionError(DatabaseError):
     """Database connection error."""
+
     pass
 
 
 class IdentifierError(DatabaseError):
     """SQL identifier error."""
+
     pass
+
 
 class CursorRowError(SibillaError):
     """Cursor row wrapper error."""
+
     pass
 
 
@@ -169,9 +180,11 @@ class CursorRow(RowWrapper):
         """
         columns = columns or [c[0] for c in cursor.description]
 
-        if type(columns) not in (list, tuple) \
-                or type(row) not in (list, tuple) \
-                or len(columns) != len(row):
+        if (
+            type(columns) not in (list, tuple)
+            or type(row) not in (list, tuple)
+            or len(columns) != len(row)
+        ):
 
             if not row:
                 raise CursorRowError("Invalid row values.")
@@ -193,10 +206,12 @@ class CursorRow(RowWrapper):
         if self._max_col_len is None:
             self._max_col_len = max([len(c) for c in self._cols])
 
-        return "\n".join([
-            ("{:"+str(self._max_col_len)+"} : ").format(c)+str(self._state[c])
-            for c in self._cols
-        ])
+        return "\n".join(
+            [
+                ("{:" + str(self._max_col_len) + "} : ").format(c) + str(self._state[c])
+                for c in self._cols
+            ]
+        )
 
     def __dir__(self):
         return self._cols
@@ -350,7 +365,7 @@ class Database(cx_Oracle.Connection):
     def __getattr__(self, name):
         return getattr(self.__lookup__, name, None)
 
-    def get_errors(self, name: str=None, type: str=None) -> list:
+    def get_errors(self, name: str = None, type: str = None) -> list:
         """Get Oracle errors.
 
         Retrieves all the current errors for the logged user. Internally, this
@@ -376,7 +391,8 @@ class Database(cx_Oracle.Connection):
         if type:
             where_list.append("type like '{}'".format(type))
 
-        return self.fetch_all("""
+        return self.fetch_all(
+            """
             select name, type, line, position, text error, src_text text from (
               select e.*, s.text src_text
               from   user_errors e
@@ -393,15 +409,14 @@ class Database(cx_Oracle.Connection):
             ) {where}
             order by name asc, type asc, sequence asc
             """.format(
-                where=(
-                    "where " + " and ".join(where_list)) if where_list else ""
-                )
+                where=("where " + " and ".join(where_list)) if where_list else ""
             )
+        )
 
     def get_output(self) -> str:
         """Get the output from the standard output stream buffer."""
-        buf = self.var('STRING')
-        status = self.var('NUMBER')
+        buf = self.var("STRING")
+        status = self.var("NUMBER")
         text = ""
 
         while True:
@@ -436,7 +451,6 @@ class Database(cx_Oracle.Connection):
             return res
 
         return self.__row_wrapper__(cursor, res) if res else None
-
 
     def fetch_all(self, stmt: str, *args, **kwargs) -> Generator[Any, None, None]:
         """Fetch all rows from the execution of the provided statement.
@@ -491,7 +505,7 @@ class Database(cx_Oracle.Connection):
         return self.__row_wrapper__.from_list(cursor, data)
 
     # TODO: Batch execute: https://blogs.oracle.com/opal/efficient-and-scalable-batch-statement-execution-in-python-cx_oracle
-    def plsql(self, stmt: str, *args, batch: list=None, **kwargs):
+    def plsql(self, stmt: str, *args, batch: list = None, **kwargs):
         """Execute (PL/)SQL code.
 
         Bind variables can be provided both as positional and as keyword
@@ -519,8 +533,7 @@ class Database(cx_Oracle.Connection):
         c += 1 if batch else 0
         if c > 1:
             raise DatabaseError(
-                "Expecting either positional argument or keyword arguments or "
-                "batch."
+                "Expecting either positional argument or keyword arguments or " "batch."
             )
 
         try:
@@ -528,12 +541,27 @@ class Database(cx_Oracle.Connection):
 
             # TODO: executemany doesn't support generators yet.
             #       See https://github.com/oracle/python-cx_Oracle/issues/200
+
+            if SIBILLA_DEBUG:
+                print("==== SIBILLA DEBUG: PL/SQL Execution ====")
+                print("Executing statement")
+                print(stmt)
+
             if batch:
+                if SIBILLA_DEBUG:
+                    print("Batch:", batch)
                 cursor.executemany(stmt, batch)
             elif kwargs:
+                if SIBILLA_DEBUG:
+                    print("Named bind variables:", kwargs)
                 cursor.execute(stmt, **kwargs)
             else:
+                if SIBILLA_DEBUG:
+                    print("Positional bind variables:", args)
                 cursor.execute(stmt, args)
+
+            if SIBILLA_DEBUG:
+                print("==== END SIBILLA DEBUG: PL/SQL Execution ====")
 
             return cursor
 
@@ -577,24 +605,48 @@ class Database(cx_Oracle.Connection):
         """
         cur = self.cursor()
         return cur.var(
-            getattr(cx_Oracle, var_type.upper()) if isinstance(var_type, str)
+            getattr(cx_Oracle, var_type.upper())
+            if isinstance(var_type, str)
             else var_type
         )
 
     def commit(self, flush_cache=True):
+        """Commit changes to the database.
+
+        Args:
+            flush_cache (bool): whether to flush the content of the cache to
+                allow new values to be fetched anew. Set to ``True`` by default.
+        """
         super().commit()
 
         if flush_cache:
             self.cache.flush()
+
+    def sys_context(self, namespace: str, parameter: str, length: int = 256) -> str:
+        """Retrieve the value of parameters associated to a namespace.
+
+        This is equivalent to querying the ``dual`` table with ``sys_context``.
+
+        Args:
+            namespace (str): the namespace to access.
+            parameter (str): the parameter to retrieve.
+            length (int): the maximum length of the returned value.
+        """
+        result, = self.plsql(
+            "select sys_context(:ns, :par, :len) from dual",
+            namespace,
+            parameter,
+            length,
+        )
+
+        return result[0]
 
     # ---- Properties ---------------------------------------------------------
 
     @property
     def session_user(self):
         """Returns the session user for the connection."""
-        return self.fetch_one(
-            "select sys_context('userenv', 'session_user') from dual"
-        )[0]
+        return self.sys_context("userenv", "session_user")
 
     @session_user.setter
     def session_user(self, value):

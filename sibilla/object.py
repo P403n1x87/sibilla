@@ -36,6 +36,7 @@ class ObjectType(type):
 
     TABLE = "TABLE"
     VIEW = "VIEW"
+    MATERIALIZED_VIEW = "MATERIALIZED VIEW"
     PACKAGE = "PACKAGE"
     PROCEDURE = "PROCEDURE"
     FUNCTION = "FUNCTION"
@@ -79,7 +80,7 @@ class OracleObject(ABC):
         return "<{} '{}'{}>".format(
             self.__type.lower(),
             self.__name,
-            " from schema '" + self.__schema + "'" if self.__schema else ""
+            " from schema '" + self.__schema + "'" if self.__schema else "",
         )
 
 
@@ -92,16 +93,19 @@ class ObjectError(sibilla.DatabaseError):
     Defines an error specific to object lookup within the Oracle database
     associated to an Database object.
     """
+
     pass
 
 
 class ObjectLookupError(ObjectError):
     """Raised when an object look-up fails."""
+
     pass
 
 
 class ObjectTypeError(ObjectError):
     """Problems with Oracle object types."""
+
     pass
 
 
@@ -119,6 +123,7 @@ from sibilla.view import View
 _type_mapping = {
     ObjectType.TABLE: Table,
     ObjectType.VIEW: View,
+    ObjectType.MATERIALIZED_VIEW: View,
     ObjectType.PROCEDURE: Procedure,
     ObjectType.FUNCTION: Function,
     ObjectType.PACKAGE: Package,
@@ -253,7 +258,7 @@ class ObjectLookup(Cached):
 
         # Check for schema
         try:
-            schema, name = qual_name.split('.')
+            schema, name = qual_name.split(".")
         except ValueError:
             schema = None
             name = qual_name
@@ -263,20 +268,24 @@ class ObjectLookup(Cached):
             object_class = self.__custom_objects__[name]
 
         except KeyError:  # Return standard object
-            _, object_type = self.__db._fetch_many(
-                """
-                select object_type
+            scope = "all" if schema else self.__db.__scope__
+
+            object_type = list(
+                self.__db.plsql(
+                    """
+                select object_type{owner_col}
                 from   {scope}_objects
                 where  object_name = :object_name
                    and object_type not in ('SYNONYM', 'PACKAGE BODY')
                    and subobject_name is null
                    {owner}
                 """.format(
-                    scope="all" if schema else self.__db.__scope__,
-                    owner=("and owner = '" + schema + "'") if schema else ""
-                ),
-                n=2,
-                object_name=name
+                        owner_col=", owner" if scope != "user" else "",
+                        scope=scope,
+                        owner=("and owner = '" + schema + "'") if schema else "",
+                    ),
+                    object_name=name,
+                )
             )
 
             if not object_type:
@@ -289,11 +298,20 @@ class ObjectLookup(Cached):
 
             if len(object_type) != 1:
                 # TODO: handle with disambiguator?
+                try:
+                    current_schema = self.__db.current_schema or self.__db.session_user
+                    for e in object_type:
+                        if e[1] == current_schema:
+                            object_class = self.get_class(e[0])
+                            return object_class(self.__db, name, schema)
+                except IndexError:
+                    pass
+
                 raise ObjectLookupError(
                     "Multiple objects returned for name '{}'".format(name)
                 )
-
-            object_class = self.get_class(object_type[0][0])
+            else:
+                object_class = self.get_class(object_type[0][0])
 
         return object_class(self.__db, name, schema)
 
@@ -311,14 +329,9 @@ class ObjectLookup(Cached):
             class: The class associated with the given type/attribute.
         """
         try:
-            return self.__custom_objects__.get(
-                type_name,
-                _type_mapping[type_name]
-            )
+            return self.__custom_objects__.get(type_name, _type_mapping[type_name])
         except KeyError:
-            raise ObjectTypeError(
-                'Object type not supported: {}.'.format(type_name)
-            )
+            raise ObjectTypeError("Object type not supported: {}.".format(type_name))
 
     def replace(self, types: dict):
         """Replace Python classes for Oracle objects.
@@ -333,6 +346,6 @@ class ObjectLookup(Cached):
                 object types can be overridden by using the constants exposed
                 by the ``ObjectType`` class as key values.
         """
-        self.__custom_objects__.update({
-            sibilla.sql_identifier(k): v for k, v in types.items()
-        })
+        self.__custom_objects__.update(
+            {sibilla.sql_identifier(k): v for k, v in types.items()}
+        )
